@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import LoadingScreen from './LoadingScreen';
 
 interface MainMenuProps {
     onStartGame: () => void;
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    const toggleMusic = () => {
+        if (audioRef.current) {
+            if (isMusicPlaying) {
+                audioRef.current.pause();
+                setIsMusicPlaying(false);
+            } else {
+                audioRef.current.play();
+                setIsMusicPlaying(true);
+            }
+        }
+    };
+
+    const handleLoadComplete = () => {
+        setIsLoaded(true);
+    };
+
+    // Показываем экран загрузки пока все не загрузится
+    if (!isLoaded) {
+        return <LoadingScreen onLoadComplete={handleLoadComplete} />;
+    }
+
     return (
         <div
             style={{
@@ -14,6 +40,47 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                 overflow: "hidden",
             }}
         >
+            {/* Фоновая музыка */}
+            <audio
+                ref={audioRef}
+                loop
+                style={{ display: "none" }}
+            >
+                <source src="/binks_sake_background.mp3" type="audio/mpeg" />
+                Ваш браузер не поддерживает аудио.
+            </audio>
+
+            {/* Кнопка управления музыкой */}
+            <button
+                onClick={toggleMusic}
+                style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "20px",
+                    zIndex: 10,
+                    background: "rgba(0, 0, 0, 0.7)",
+                    border: "2px solid #8B0000",
+                    borderRadius: "50%",
+                    width: "50px",
+                    height: "50px",
+                    cursor: "pointer",
+                    color: "#8B0000",
+                    fontSize: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.3s ease",
+                }}
+                onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(139, 0, 0, 0.3)";
+                }}
+                onMouseOut={(e) => {
+                    e.currentTarget.style.background = "rgba(0, 0, 0, 0.7)";
+                }}
+            >
+                {isMusicPlaying ? "🔊" : "🔇"}
+            </button>
+
             {/* Видео фон */}
             <video
                 autoPlay
