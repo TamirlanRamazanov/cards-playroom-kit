@@ -12,7 +12,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
         const mediaFiles = [
             '/going-merry-ship-one-piece-moewalls-com-compressed.mp4',
             '/menu_prototype.png',
-            '/binks_sake_background.mp3'
+            '/binks_sake_background.mp3',
+            '/favicon_luffy.png'
         ];
 
         let loadedFiles = 0;
@@ -47,7 +48,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
         video.onerror = () => updateProgress('video'); // На случай ошибки
         video.src = mediaFiles[0];
 
-        // Предзагрузка изображения
+        // Предзагрузка изображения UI
         const img = new Image();
         img.onload = () => updateProgress('image');
         img.onerror = () => updateProgress('image');
@@ -59,6 +60,12 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
         audio.oncanplaythrough = () => updateProgress('audio');
         audio.onerror = () => updateProgress('audio');
         audio.src = mediaFiles[2];
+
+        // Предзагрузка favicon
+        const favicon = new Image();
+        favicon.onload = () => updateProgress('favicon');
+        favicon.onerror = () => updateProgress('favicon');
+        favicon.src = mediaFiles[3];
 
         // Таймаут на случай если что-то не загрузится
         const timeout = setTimeout(() => {
