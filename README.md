@@ -56,3 +56,4 @@ npm run preview
 - Мобильные устройства
 # Trigger redeploy
 # Fix email for Vercel
+# Fix email configuration
