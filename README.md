@@ -54,3 +54,4 @@ npm run preview
 - Десктоп
 - Планшеты
 - Мобильные устройства
+# Trigger redeploy
