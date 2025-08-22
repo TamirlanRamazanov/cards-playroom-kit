@@ -97,7 +97,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                     zIndex: 1,
                 }}
             >
-                <source src="/going-merry-ship-one-piece-moewalls-com-compressed.mp4" type="video/mp4" />
+                <source src="/going-merry-ship-one-piece-moewalls-com-compressed-small.mp4" type="video/mp4" />
                 Ваш браузер не поддерживает видео.
             </video>
 

@@ -10,7 +10,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
 
     useEffect(() => {
         const mediaFiles = [
-            '/going-merry-ship-one-piece-moewalls-com-compressed.mp4',
+            '/going-merry-ship-one-piece-moewalls-com-compressed-small.mp4',
             '/menu_prototype.png',
             '/binks_sake_background.mp3',
             '/favicon_luffy.png'
@@ -18,19 +18,33 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
 
         let loadedFiles = 0;
         const totalFiles = mediaFiles.length;
+        let videoLoaded = false;
 
         const updateProgress = (fileName: string) => {
             loadedFiles++;
-            const progress = Math.round((loadedFiles / totalFiles) * 100);
-            setLoadingProgress(progress);
+            
+            // Видео получает больший вес в прогрессе (50% от общего прогресса)
+            let progress;
+            if (fileName === 'video') {
+                videoLoaded = true;
+                progress = 50; // Видео загружено - 50%
+            } else {
+                // Остальные файлы делят оставшиеся 50%
+                const otherFilesProgress = (loadedFiles - (videoLoaded ? 1 : 0)) / (totalFiles - 1) * 50;
+                progress = videoLoaded ? 50 + otherFilesProgress : otherFilesProgress;
+            }
+            
+            setLoadingProgress(Math.round(progress));
             
             // Обновляем текст загрузки
-            if (fileName.includes('video') || fileName.includes('.mp4')) {
+            if (fileName === 'video') {
                 setLoadingText('Загрузка видео...');
-            } else if (fileName.includes('audio') || fileName.includes('.mp3')) {
+            } else if (fileName === 'audio') {
                 setLoadingText('Загрузка музыки...');
-            } else if (fileName.includes('image') || fileName.includes('.png')) {
+            } else if (fileName === 'image') {
                 setLoadingText('Загрузка UI...');
+            } else if (fileName === 'favicon') {
+                setLoadingText('Финальная подготовка...');
             }
 
             if (loadedFiles === totalFiles) {
@@ -41,11 +55,11 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) => {
             }
         };
 
-        // Предзагрузка видео
+        // Предзагрузка видео с более точным отслеживанием
         const video = document.createElement('video');
         video.preload = 'auto';
         video.oncanplaythrough = () => updateProgress('video');
-        video.onerror = () => updateProgress('video'); // На случай ошибки
+        video.onerror = () => updateProgress('video');
         video.src = mediaFiles[0];
 
         // Предзагрузка изображения UI
