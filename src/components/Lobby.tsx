@@ -1,5 +1,6 @@
 import type { GameState } from "../types";
 import { makeDeck, drawOne } from "../engine/deck";
+import type { Card } from "../types";
 
 interface Props {
     myId: string;
@@ -24,7 +25,7 @@ export default function Lobby({ myId, game, updateGame }: Props) {
             hands[pid] = c ? [c] : [];
         }
 
-        const slots = new Array(playerIds.length).fill(null) as (string | null)[];
+        const slots = new Array(playerIds.length).fill(null) as (Card | null)[];
 
         updateGame((prev) => ({
             ...prev,

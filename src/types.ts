@@ -1,4 +1,10 @@
-export type Card = string; // e.g. "AS", "TD"
+export interface Card {
+    id: number;
+    name: string;
+    power: number;
+    factions: number[];
+    image: string;
+}
 
 export type PlayersMap = Record<string, { name: string }>; // playerId -> profile
 

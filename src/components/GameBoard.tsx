@@ -1,5 +1,4 @@
 import type { GameState, Card } from "../types";
-import { cardLabel } from "../engine/deck";
 import GameOverModal from "./GameOverModal";
 
 interface Props {
@@ -95,7 +94,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: `repeat(${Math.max(1, playerIds.length)}, 100px)`,
+                        gridTemplateColumns: `repeat(${Math.max(1, playerIds.length)}, 120px)`,
                         gap: 16,
                     }}
                 >
@@ -104,41 +103,74 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             key={idx}
                             onClick={() => takeFromSlot(idx)}
                             style={{
-                                height: 140,
-                                width: 100,
+                                height: 160,
+                                width: 120,
                                 borderRadius: 12,
                                 border: "2px dashed #334155",
                                 background: slot ? "#11172e" : "#0b1020",
                                 color: "#fff",
                                 cursor: slot ? "pointer" : "pointer",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "8px",
                             }}
                         >
-              <span style={{ fontSize: 28 }}>
-                {slot ? cardLabel(slot) : ""}
-              </span>
+                            {slot ? (
+                                <>
+                                    <div style={{ fontSize: "12px", fontWeight: "bold", textAlign: "center", marginBottom: "4px" }}>
+                                        {slot.name}
+                                    </div>
+                                    <div style={{ fontSize: "18px", color: "#8B0000", fontWeight: "bold" }}>
+                                        {slot.power}
+                                    </div>
+                                </>
+                            ) : (
+                                <span style={{ fontSize: "14px", opacity: 0.5 }}>Пусто</span>
+                            )}
                         </button>
                     ))}
                 </div>
             </div>
 
             {/* My hand */}
-            <div style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <div style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
                 {myHand.length === 0 && <div style={{ opacity: 0.7, fontSize: 14 }}>В руке нет карт</div>}
                 {myHand.map((c, i) => (
                     <button
-                        key={`${c}-${i}`}
+                        key={`${c.id}-${i}`}
                         onClick={() => moveMyCardToFreeSlot(c)}
                         style={{
-                            height: 140,
-                            width: 100,
+                            height: 160,
+                            width: 120,
                             borderRadius: 12,
-                            border: "1px solid #6366f1",
-                            background: "#312e81",
+                            border: "2px solid #8B0000",
+                            background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
                             color: "#fff",
                             cursor: "pointer",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px",
+                            transition: "all 0.2s ease",
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(139, 0, 0, 0.3)";
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "none";
                         }}
                     >
-                        <span style={{ fontSize: 28 }}>{cardLabel(c)}</span>
+                        <div style={{ fontSize: "12px", fontWeight: "bold", textAlign: "center", marginBottom: "4px" }}>
+                            {c.name}
+                        </div>
+                        <div style={{ fontSize: "18px", color: "#8B0000", fontWeight: "bold" }}>
+                            {c.power}
+                        </div>
                     </button>
                 ))}
             </div>
