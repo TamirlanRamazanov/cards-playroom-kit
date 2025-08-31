@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { DragDropContext } from 'react-beautiful-dnd';
-import type { DropResult } from 'react-beautiful-dnd';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import type { GameState } from "../types";
 import DropZone from "./DropZone";
+import DraggableCard from "./DraggableCard";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -50,8 +51,15 @@ interface DebugGameBoardProps {
     onBack?: () => void;
 }
 
+interface CardData {
+    card: any;
+    index: number;
+    source: string;
+}
+
 const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
     const [gameState, setGameState] = useState<GameState>(createDebugGameState);
+    const [activeCard, setActiveCard] = useState<CardData | null>(null);
     const myId = "debug-host";
     const myHand = gameState.hands[myId] || [];
 
@@ -59,64 +67,77 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         setGameState(updater);
     };
 
-    const handleDragEnd = (result: DropResult) => {
-        if (!result.destination) return;
+    const handleDragStart = (event: DragStartEvent) => {
+        const { active } = event;
+        const cardData = active.data.current as CardData;
+        if (cardData) {
+            setActiveCard(cardData);
+        }
+    };
 
-        const { source, destination } = result;
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
         
-        console.log('Drag result:', { source, destination });
+        console.log('Drag result:', { active, over });
         
+        if (!over) {
+            setActiveCard(null);
+            return;
+        }
+
+        const cardData = active.data.current as CardData;
+        if (!cardData) {
+            setActiveCard(null);
+            return;
+        }
+
+        const { card, index, source } = cardData;
+        const targetZone = over.id;
+
         // Перемещение карты из руки на стол
-        if (source.droppableId === 'my-hand' && destination.droppableId === 'table') {
-            const cardIndex = parseInt(source.index.toString());
-            const slotIndex = parseInt(destination.index.toString());
+        if (source === 'hand' && targetZone === 'table') {
+            const slotIndex = parseInt(over.id.toString().split('-')[1] || '0');
             
-            if (cardIndex >= 0 && slotIndex >= 0 && cardIndex < myHand.length) {
-                const card = myHand[cardIndex];
+            updateGame((prev) => {
+                if (!prev.slots) return prev;
                 
-                updateGame((prev) => {
-                    if (!prev.slots) return prev;
-                    
-                    // Проверяем, что слот пустой
-                    if (prev.slots[slotIndex] !== null) return prev;
-                    
-                    const myCards = [...(prev.hands[myId] || [])];
-                    myCards.splice(cardIndex, 1);
-                    
-                    const slots = [...prev.slots];
-                    slots[slotIndex] = card;
-                    
-                    return {
-                        ...prev,
-                        hands: { ...prev.hands, [myId]: myCards },
-                        slots,
-                    };
-                });
-            }
+                // Проверяем, что слот пустой
+                if (prev.slots[slotIndex] !== null) return prev;
+                
+                const myCards = [...(prev.hands[myId] || [])];
+                myCards.splice(index, 1);
+                
+                const slots = [...prev.slots];
+                slots[slotIndex] = card;
+                
+                return {
+                    ...prev,
+                    hands: { ...prev.hands, [myId]: myCards },
+                    slots,
+                };
+            });
         }
         
         // Взятие карты со стола
-        if (source.droppableId === 'table' && destination.droppableId === 'my-hand') {
-            const slotIndex = parseInt(source.index.toString());
+        if (source === 'table' && targetZone === 'my-hand') {
+            const slotIndex = parseInt(active.id.toString().split('-')[2] || '0');
             
-            if (slotIndex >= 0 && gameState.slots && gameState.slots[slotIndex]) {
-                const card = gameState.slots[slotIndex];
+            updateGame((prev) => {
+                if (!prev.slots) return prev;
                 
-                updateGame((prev) => {
-                    if (!prev.slots) return prev;
-                    
-                    const myCards = [...(prev.hands[myId] || []), card!];
-                    const slots = [...prev.slots];
-                    slots[slotIndex] = null;
-                    
-                    return {
-                        ...prev,
-                        hands: { ...prev.hands, [myId]: myCards },
-                        slots,
-                    };
-                });
-            }
+                const myCards = [...(prev.hands[myId] || []), card];
+                const slots = [...prev.slots];
+                slots[slotIndex] = null;
+                
+                return {
+                    ...prev,
+                    hands: { ...prev.hands, [myId]: myCards },
+                    slots,
+                };
+            });
         }
+
+        setActiveCard(null);
     };
 
     const resetGame = () => {
@@ -135,7 +156,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
     };
 
     return (
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
                 minHeight: "100vh", 
                 display: "flex", 
@@ -290,8 +311,19 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                 }}>
                     <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения</div>
                 </div>
+
+                {/* Drag Overlay */}
+                <DragOverlay>
+                    {activeCard ? (
+                        <DraggableCard
+                            card={activeCard.card}
+                            index={activeCard.index}
+                            isInHand={activeCard.source === 'hand'}
+                        />
+                    ) : null}
+                </DragOverlay>
             </div>
-        </DragDropContext>
+        </DndContext>
     );
 };
 
