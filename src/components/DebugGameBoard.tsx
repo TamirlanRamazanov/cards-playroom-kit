@@ -158,10 +158,19 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
                 minHeight: "100vh", 
+                width: "100vw",
+                margin: 0,
+                padding: 0,
                 display: "flex", 
                 flexDirection: "column", 
                 background: "#0b1020", 
-                color: "#fff" 
+                color: "#fff",
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                overflow: "hidden"
             }}>
                 {/* Debug Header */}
                 <div style={{ 
