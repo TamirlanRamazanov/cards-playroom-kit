@@ -3,9 +3,10 @@ import LoadingScreen from './LoadingScreen';
 
 interface MainMenuProps {
     onStartGame: () => void;
+    onDebugGame: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -178,7 +179,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                 {/* Примеры других кнопок - раскомментируйте и настройте по необходимости */}
                 
                 <button
-                    onClick={() => console.log("Settings clicked")}
+                    onClick={onDebugGame}
                     style={{
                         position: "absolute",
                         top: "68.5%", // Настройте позицию
@@ -202,7 +203,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                         paddingBottom: "3%",  
                     }}
                 >
-                    Settings
+                    Debug
                 </button>
 
                 <button
