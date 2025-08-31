@@ -3,7 +3,6 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import type { GameState } from "../types";
 import DropZone from "./DropZone";
-import DraggableCard from "./DraggableCard";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -315,11 +314,59 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                 {/* Drag Overlay */}
                 <DragOverlay>
                     {activeCard ? (
-                        <DraggableCard
-                            card={activeCard.card}
-                            index={activeCard.index}
-                            isInHand={activeCard.source === 'hand'}
-                        />
+                        <div style={{
+                            height: 160,
+                            width: 120,
+                            borderRadius: 12,
+                            border: activeCard.source === 'hand' 
+                                ? "2px solid #8B0000" 
+                                : "2px solid #334155",
+                            background: "linear-gradient(135deg, #2a2a4e 0%, #1e1e3e 100%)",
+                            color: "#fff",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px",
+                            transform: "rotate(5deg) scale(1.05)",
+                            boxShadow: "0 8px 25px rgba(139, 0, 0, 0.4)",
+                            zIndex: 1000,
+                        }}>
+                            <div style={{ 
+                                fontSize: "12px", 
+                                fontWeight: "bold", 
+                                textAlign: "center", 
+                                marginBottom: "4px",
+                                color: "#FFD700"
+                            }}>
+                                {activeCard.card.name}
+                            </div>
+                            <div style={{ 
+                                fontSize: "18px", 
+                                color: "#8B0000", 
+                                fontWeight: "bold",
+                                textShadow: "1px 1px 2px rgba(0,0,0,0.8)"
+                            }}>
+                                {activeCard.card.power}
+                            </div>
+                            <div style={{
+                                position: "absolute",
+                                top: "-10px",
+                                right: "-10px",
+                                background: "#8B0000",
+                                color: "#fff",
+                                borderRadius: "50%",
+                                width: "20px",
+                                height: "20px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "12px",
+                                fontWeight: "bold"
+                            }}>
+                                {activeCard.card.power}
+                            </div>
+                        </div>
                     ) : null}
                 </DragOverlay>
             </div>
