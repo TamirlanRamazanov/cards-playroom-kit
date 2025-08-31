@@ -54,6 +54,10 @@ export default function App() {
         setCurrentPage("debug");
     };
 
+    const handleBackToMainMenu = () => {
+        setCurrentPage("mainMenu");
+    };
+
     // регистрируем себя в общем стейте, назначаем хоста если ещё нет
     useEffect(() => {
         if (!ready) return;
@@ -74,11 +78,6 @@ export default function App() {
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
         return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} />;
-    }
-
-    // Отображаем debug страницу
-    if (currentPage === "debug") {
-        return <DebugGameBoard />;
     }
 
     // Отображаем страницу входа
@@ -129,6 +128,11 @@ export default function App() {
                 </div>
             </div>
         );
+    }
+
+    // Отображаем debug страницу
+    if (currentPage === "debug") {
+        return <DebugGameBoard onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем игру (лобби или игровую доску)

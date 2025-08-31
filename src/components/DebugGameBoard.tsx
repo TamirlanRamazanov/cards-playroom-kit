@@ -46,7 +46,11 @@ const createDebugGameState = (): GameState => ({
     startedAt: Date.now(),
 });
 
-const DebugGameBoard: React.FC = () => {
+interface DebugGameBoardProps {
+    onBack?: () => void;
+}
+
+const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
     const [gameState, setGameState] = useState<GameState>(createDebugGameState);
     const myId = "debug-host";
     const myHand = gameState.hands[myId] || [];
@@ -181,6 +185,21 @@ const DebugGameBoard: React.FC = () => {
                         >
                             Сброс
                         </button>
+                        {onBack && (
+                            <button 
+                                onClick={onBack}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#374151",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                ← Назад
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -210,7 +229,6 @@ const DebugGameBoard: React.FC = () => {
                     <DropZone
                         id="table"
                         cards={gameState.slots || []}
-                        maxCards={6}
                         onCardClick={(index) => {
                             console.log('Clicked table slot:', index);
                             // Логика взятия карты со стола
@@ -237,7 +255,6 @@ const DebugGameBoard: React.FC = () => {
                     <DropZone
                         id="my-hand"
                         cards={myHand}
-                        maxCards={myHand.length}
                         onCardClick={(index) => {
                             console.log('Clicked hand card:', index);
                             // Логика выкладывания карты на стол
