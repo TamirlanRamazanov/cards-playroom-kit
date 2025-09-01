@@ -6,6 +6,7 @@ import DropZone from "./DropZone";
 import GameHUD from "./GameHUD";
 import DuelSystem from "./DuelSystem";
 import RoleSystem from "./RoleSystem";
+import CardDrawSystem from "./CardDrawSystem";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -22,14 +23,10 @@ const createDebugGameState = (): GameState => ({
             CARDS_DATA[0], // Luffy
             CARDS_DATA[1], // Zoro
             CARDS_DATA[2], // Nami
-            CARDS_DATA[3], // Usopp
-            CARDS_DATA[4], // Sanji
-            CARDS_DATA[5], // Chopper
         ],
         "player-2": [
             CARDS_DATA[6], // Robin
             CARDS_DATA[7], // Franky
-            CARDS_DATA[8], // Brook
         ],
         "player-3": [
             CARDS_DATA[9], // Jinbe
@@ -59,6 +56,21 @@ const createDebugGameState = (): GameState => ({
     attackTarget: undefined,
     canPass: true,
     canTakeCards: true,
+    
+    // Card draw system
+    deck: [
+        CARDS_DATA[3], // Usopp
+        CARDS_DATA[4], // Sanji
+        CARDS_DATA[5], // Chopper
+        CARDS_DATA[8], // Brook
+        CARDS_DATA[13], // Shanks
+        CARDS_DATA[14], // Mihawk
+        CARDS_DATA[15], // Whitebeard
+    ],
+    discardPile: [],
+    maxHandSize: 6,
+    cardsDrawnThisTurn: {},
+    canDrawCards: true,
 });
 
 interface DebugGameBoardProps {
@@ -195,6 +207,41 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         // Логика взятия карт будет реализована позже
     };
 
+    // Card Draw Actions
+    const handleDrawCard = () => {
+        if (gameState.deck.length === 0) return;
+        
+        updateGame((prev) => {
+            const newDeck = [...prev.deck];
+            const drawnCard = newDeck.pop()!;
+            const myCards = [...(prev.hands[myId] || []), drawnCard];
+            const cardsDrawn = { ...prev.cardsDrawnThisTurn };
+            cardsDrawn[myId] = (cardsDrawn[myId] || 0) + 1;
+            
+            return {
+                ...prev,
+                deck: newDeck,
+                hands: { ...prev.hands, [myId]: myCards },
+                cardsDrawnThisTurn: cardsDrawn,
+            };
+        });
+    };
+
+    const handleShuffleDeck = () => {
+        if (gameState.deck.length === 0 && gameState.discardPile.length === 0) return;
+        
+        updateGame((prev) => {
+            const allCards = [...prev.deck, ...prev.discardPile];
+            const shuffledDeck = allCards.sort(() => Math.random() - 0.5);
+            
+            return {
+                ...prev,
+                deck: shuffledDeck,
+                discardPile: [],
+            };
+        });
+    };
+
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
@@ -235,6 +282,14 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     game={gameState}
                 />
 
+                {/* Card Draw System */}
+                <CardDrawSystem
+                    myId={myId}
+                    game={gameState}
+                    onDrawCard={handleDrawCard}
+                    onShuffleDeck={handleShuffleDeck}
+                />
+
                 {/* Debug Header */}
                 <div style={{ 
                     padding: "12px 20px", 
@@ -248,7 +303,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     <div>
                         <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Debug Game Board</h2>
                         <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0}
+                            Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length}
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
@@ -381,7 +436,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна</div>
+                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна | 📚 Система добора карт активна</div>
                 </div>
 
                 {/* Drag Overlay */}

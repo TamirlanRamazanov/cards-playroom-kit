@@ -4,7 +4,6 @@ import type { GameState } from "./types";
 import Lobby from "./components/Lobby";
 import GameBoard from "./components/GameBoard";
 import MainMenu from "./components/MainMenu";
-import DebugGameBoard from "./components/DebugGameBoard";
 
 // myId станет доступен после insertCoin()
 function useMyId(ready: boolean): string {
@@ -20,7 +19,7 @@ function useMyId(ready: boolean): string {
 export default function App() {
     const [ready, setReady] = useState(false);
     const [name, setName] = useState("");
-    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "debug">("mainMenu");
+    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game">("mainMenu");
 
     const [game, setGame] = useMultiplayerState<GameState>("game", {
         phase: "lobby",
@@ -31,6 +30,12 @@ export default function App() {
         playerCountAtStart: undefined,
         winnerId: undefined,
         startedAt: undefined,
+        // Card draw system
+        deck: [],
+        discardPile: [],
+        maxHandSize: 6,
+        cardsDrawnThisTurn: {},
+        canDrawCards: true,
     });
 
     const myId = useMyId(ready);
@@ -48,14 +53,6 @@ export default function App() {
 
     const handleStartGame = () => {
         setCurrentPage("login");
-    };
-
-    const handleDebugGame = () => {
-        setCurrentPage("debug");
-    };
-
-    const handleBackToMainMenu = () => {
-        setCurrentPage("mainMenu");
     };
 
     // регистрируем себя в общем стейте, назначаем хоста если ещё нет
@@ -77,7 +74,7 @@ export default function App() {
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
-        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} />;
+        return <MainMenu onStartGame={handleStartGame} />;
     }
 
     // Отображаем страницу входа
@@ -128,11 +125,6 @@ export default function App() {
                 </div>
             </div>
         );
-    }
-
-    // Отображаем debug страницу
-    if (currentPage === "debug") {
-        return <DebugGameBoard onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем игру (лобби или игровую доску)

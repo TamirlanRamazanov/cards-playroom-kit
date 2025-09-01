@@ -62,15 +62,21 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     };
 
     const onRestartToLobby = () => {
-        updateGame((prev) => ({
+        updateGame(() => ({
             phase: "lobby",
-            hostId: prev.hostId, // keep same host
-            players: prev.players, // keep players list
+            hostId: myId,
+            players: { [myId]: { name: game.players[myId]?.name || "Player" } },
             hands: {},
             slots: [],
             playerCountAtStart: undefined,
             winnerId: undefined,
             startedAt: undefined,
+            // Card draw system
+            deck: [],
+            discardPile: [],
+            maxHandSize: 6,
+            cardsDrawnThisTurn: {},
+            canDrawCards: true,
         }));
     };
 

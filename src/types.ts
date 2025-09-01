@@ -29,4 +29,11 @@ export interface GameState {
     attackTarget?: string; // playerId being attacked
     canPass?: boolean; // whether current player can pass
     canTakeCards?: boolean; // whether current player can take cards
+    
+    // Card draw system
+    deck: Card[]; // remaining cards in deck
+    discardPile: Card[]; // discarded cards
+    maxHandSize: number; // maximum cards in hand
+    cardsDrawnThisTurn: Record<string, number>; // cards drawn by each player this turn
+    canDrawCards: boolean; // whether current player can draw cards
 }
