@@ -3,6 +3,7 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import type { GameState } from "../types";
 import DropZone from "./DropZone";
+import GameHUD from "./GameHUD";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -44,6 +45,18 @@ const createDebugGameState = (): GameState => ({
     playerCountAtStart: 3,
     winnerId: undefined,
     startedAt: Date.now(),
+    
+    // Turn system
+    currentTurn: "debug-host",
+    turnOrder: ["debug-host", "player-2", "player-3"],
+    currentTurnIndex: 0,
+    
+    // Game mechanics
+    attackingCard: null,
+    defendingCard: null,
+    attackTarget: undefined,
+    canPass: true,
+    canTakeCards: true,
 });
 
 interface DebugGameBoardProps {
@@ -154,6 +167,32 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         }));
     };
 
+    // HUD Actions
+    const handleEndTurn = () => {
+        updateGame((prev) => {
+            if (!prev.turnOrder || prev.currentTurnIndex === undefined) return prev;
+            
+            const nextIndex = (prev.currentTurnIndex + 1) % prev.turnOrder.length;
+            const nextPlayer = prev.turnOrder[nextIndex];
+            
+            return {
+                ...prev,
+                currentTurn: nextPlayer,
+                currentTurnIndex: nextIndex,
+            };
+        });
+    };
+
+    const handlePass = () => {
+        console.log('Pass action');
+        // Логика паса будет реализована позже
+    };
+
+    const handleTakeCards = () => {
+        console.log('Take cards action');
+        // Логика взятия карт будет реализована позже
+    };
+
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
@@ -172,6 +211,16 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                 bottom: 0,
                 overflow: "hidden"
             }}>
+                {/* Game HUD */}
+                <GameHUD
+                    myId={myId}
+                    game={gameState}
+                    currentTurn={gameState.currentTurn}
+                    onEndTurn={handleEndTurn}
+                    onPass={handlePass}
+                    onTakeCards={handleTakeCards}
+                />
+
                 {/* Debug Header */}
                 <div style={{ 
                     padding: "12px 20px", 
@@ -179,7 +228,8 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     borderBottom: "2px solid #8B0000",
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: "center",
+                    marginTop: "80px" // Отступ для HUD
                 }}>
                     <div>
                         <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Debug Game Board</h2>
@@ -280,7 +330,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                 </div>
 
                 {/* My hand */}
-                <div style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "80px" }}>
                     <DropZone
                         id="my-hand"
                         cards={myHand}
@@ -317,7 +367,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения</div>
+                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна</div>
                 </div>
 
                 {/* Drag Overlay */}

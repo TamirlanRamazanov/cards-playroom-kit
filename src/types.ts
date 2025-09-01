@@ -17,4 +17,16 @@ export interface GameState {
     playerCountAtStart?: number; // fixed at start
     winnerId?: string; // set when someone collects all cards
     startedAt?: number;
+    
+    // Turn system
+    currentTurn?: string; // playerId whose turn it is
+    turnOrder?: string[]; // order of players for turns
+    currentTurnIndex?: number; // index in turnOrder
+    
+    // Game mechanics
+    attackingCard?: Card | null; // card that is currently attacking
+    defendingCard?: Card | null; // card that is defending
+    attackTarget?: string; // playerId being attacked
+    canPass?: boolean; // whether current player can pass
+    canTakeCards?: boolean; // whether current player can take cards
 }
