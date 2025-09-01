@@ -4,6 +4,7 @@ export interface Card {
     power: number;
     factions: number[];
     image: string;
+    rank: number; // Ранг карты от 50 до 100
 }
 
 export type PlayersMap = Record<string, { name: string }>; // playerId -> profile
@@ -43,4 +44,9 @@ export interface GameState {
     targetSelectionMode: boolean; // whether player is selecting attack target
     selectedTarget?: string; // currently selected target for attack
     factionEffects: Record<number, string[]>; // faction -> list of effect descriptions
+    
+    // Card power system
+    minCardRank: number; // минимальный ранг карты (50)
+    maxCardRank: number; // максимальный ранг карты (100)
+    canDefendWithEqualRank: boolean; // может ли карта с равным рангом защищаться
 }

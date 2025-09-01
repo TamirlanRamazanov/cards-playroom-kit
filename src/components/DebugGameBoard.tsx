@@ -8,6 +8,7 @@ import DuelSystem from "./DuelSystem";
 import RoleSystem from "./RoleSystem";
 import CardDrawSystem from "./CardDrawSystem";
 import FactionSystem from "./FactionSystem";
+import CardPowerSystem from "./CardPowerSystem";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -87,6 +88,11 @@ const createDebugGameState = (): GameState => ({
         2: ["Получает дополнительную карту при победе", "Может защищаться от любой атаки"],
         3: ["Увеличивает силу всех карт в руке на +1", "Особая способность: 'Взрыв'"],
     },
+    
+    // Card power system
+    minCardRank: 50,
+    maxCardRank: 100,
+    canDefendWithEqualRank: true,
 });
 
 interface DebugGameBoardProps {
@@ -351,6 +357,12 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     onCancelTarget={handleCancelTarget}
                 />
 
+                {/* Card Power System */}
+                <CardPowerSystem
+                    myId={myId}
+                    game={gameState}
+                />
+
                 {/* Debug Header */}
                 <div style={{ 
                     padding: "12px 20px", 
@@ -510,7 +522,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна | 📚 Система добора карт активна | 🏛️ Система фракций активна</div>
+                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна | 📚 Система добора карт активна | 🏛️ Система фракций активна | ⚔️ Система силы карт активна</div>
                 </div>
 
                 {/* Drag Overlay */}

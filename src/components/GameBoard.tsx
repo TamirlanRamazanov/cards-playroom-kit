@@ -83,6 +83,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             targetSelectionMode: false,
             selectedTarget: undefined,
             factionEffects: {},
+            // Card power system
+            minCardRank: 50,
+            maxCardRank: 100,
+            canDefendWithEqualRank: true,
         }));
     };
 
