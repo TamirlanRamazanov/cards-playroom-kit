@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { insertCoin, myPlayer, useMultiplayerState } from "playroomkit";
 import type { GameState } from "./types";
-import Lobby from "./components/Lobby";
 import GameBoard from "./components/GameBoard";
 import MainMenu from "./components/MainMenu";
+import DebugGameBoard from "./components/DebugGameBoard";
 
 // myId станет доступен после insertCoin()
 function useMyId(ready: boolean): string {
@@ -19,7 +19,7 @@ function useMyId(ready: boolean): string {
 export default function App() {
     const [ready, setReady] = useState(false);
     const [name, setName] = useState("");
-    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game">("mainMenu");
+    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "debug">("mainMenu");
 
     const [game, setGame] = useMultiplayerState<GameState>("game", {
         phase: "lobby",
@@ -55,6 +55,14 @@ export default function App() {
         setCurrentPage("login");
     };
 
+    const handleDebugGame = () => {
+        setCurrentPage("debug");
+    };
+
+    const handleBackToMainMenu = () => {
+        setCurrentPage("mainMenu");
+    };
+
     // регистрируем себя в общем стейте, назначаем хоста если ещё нет
     useEffect(() => {
         if (!ready) return;
@@ -74,7 +82,7 @@ export default function App() {
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
-        return <MainMenu onStartGame={handleStartGame} />;
+        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} />;
     }
 
     // Отображаем страницу входа
@@ -127,6 +135,11 @@ export default function App() {
         );
     }
 
+    // Отображаем debug страницу
+    if (currentPage === "debug") {
+        return <DebugGameBoard onBack={handleBackToMainMenu} />;
+    }
+
     // Отображаем игру (лобби или игровую доску)
     if (game.phase === "lobby") {
         return (
@@ -141,24 +154,40 @@ export default function App() {
                     color: "#fff",
                 }}
             >
-                <Lobby myId={myId} game={game} updateGame={updateGame} />
+                <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
+                    <h1 style={{ fontSize: 20, marginBottom: 8 }}>Лобби</h1>
+                    <div style={{ marginBottom: 12 }}>
+                        Игроки: {Object.values(game.players || {}).map((p) => p.name).join(", ")}
+                    </div>
+                    {myId === game.hostId && (
+                        <button
+                            onClick={() => {
+                                updateGame((prev) => ({ ...prev, phase: "playing" }));
+                            }}
+                            style={{
+                                width: "100%",
+                                padding: 10,
+                                borderRadius: 10,
+                                border: 0,
+                                background: "#10b981",
+                                color: "#fff",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Начать игру
+                        </button>
+                    )}
+                </div>
             </div>
         );
     }
 
+    // Отображаем игровую доску
     return (
-        <div
-            style={{
-                width: "100vw",
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#0b1020",
-                color: "#fff",
-            }}
-        >
-            <GameBoard myId={myId} game={game} updateGame={updateGame} />
-        </div>
+        <GameBoard
+            myId={myId}
+            game={game}
+            updateGame={updateGame}
+        />
     );
 }
