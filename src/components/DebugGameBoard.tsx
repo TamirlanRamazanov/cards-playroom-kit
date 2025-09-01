@@ -7,6 +7,7 @@ import GameHUD from "./GameHUD";
 import DuelSystem from "./DuelSystem";
 import RoleSystem from "./RoleSystem";
 import CardDrawSystem from "./CardDrawSystem";
+import FactionSystem from "./FactionSystem";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -71,6 +72,21 @@ const createDebugGameState = (): GameState => ({
     maxHandSize: 6,
     cardsDrawnThisTurn: {},
     canDrawCards: true,
+    
+    // Faction system
+    availableTargets: ["player-2", "player-3"],
+    factionBonuses: {
+        1: 2, // Фракция 1: +2 к силе
+        2: 1, // Фракция 2: +1 к силе
+        3: 3, // Фракция 3: +3 к силе
+    },
+    targetSelectionMode: false,
+    selectedTarget: undefined,
+    factionEffects: {
+        1: ["Может атаковать дважды за ход", "Иммунитет к эффектам заморозки"],
+        2: ["Получает дополнительную карту при победе", "Может защищаться от любой атаки"],
+        3: ["Увеличивает силу всех карт в руке на +1", "Особая способность: 'Взрыв'"],
+    },
 });
 
 interface DebugGameBoardProps {
@@ -242,6 +258,42 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         });
     };
 
+    // Faction Actions
+    const handleSelectTarget = (targetId: string) => {
+        updateGame((prev) => ({
+            ...prev,
+            selectedTarget: targetId,
+        }));
+    };
+
+    const handleConfirmTarget = () => {
+        if (!gameState.selectedTarget) return;
+        
+        updateGame((prev) => ({
+            ...prev,
+            attackTarget: prev.selectedTarget,
+            targetSelectionMode: false,
+            selectedTarget: undefined,
+        }));
+    };
+
+    const handleCancelTarget = () => {
+        updateGame((prev) => ({
+            ...prev,
+            targetSelectionMode: false,
+            selectedTarget: undefined,
+        }));
+    };
+
+    // Toggle Target Selection Mode
+    const toggleTargetSelection = () => {
+        updateGame((prev) => ({
+            ...prev,
+            targetSelectionMode: !prev.targetSelectionMode,
+            selectedTarget: undefined,
+        }));
+    };
+
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
@@ -290,6 +342,15 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     onShuffleDeck={handleShuffleDeck}
                 />
 
+                {/* Faction System */}
+                <FactionSystem
+                    myId={myId}
+                    game={gameState}
+                    onSelectTarget={handleSelectTarget}
+                    onConfirmTarget={handleConfirmTarget}
+                    onCancelTarget={handleCancelTarget}
+                />
+
                 {/* Debug Header */}
                 <div style={{ 
                     padding: "12px 20px", 
@@ -307,6 +368,19 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                        <button 
+                            onClick={toggleTargetSelection}
+                            style={{
+                                padding: "8px 12px",
+                                background: gameState.targetSelectionMode ? "#DC143C" : "#7C3AED",
+                                border: "none",
+                                borderRadius: "6px",
+                                color: "#fff",
+                                cursor: "pointer"
+                            }}
+                        >
+                            {gameState.targetSelectionMode ? "🎯 Отменить выбор" : "🎯 Выбор цели"}
+                        </button>
                         <button 
                             onClick={addRandomCard}
                             style={{
@@ -436,7 +510,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна | 📚 Система добора карт активна</div>
+                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна | 👑 Система ролей активна | 📚 Система добора карт активна | 🏛️ Система фракций активна</div>
                 </div>
 
                 {/* Drag Overlay */}

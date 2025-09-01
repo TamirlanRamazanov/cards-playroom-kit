@@ -36,6 +36,12 @@ export default function App() {
         maxHandSize: 6,
         cardsDrawnThisTurn: {},
         canDrawCards: true,
+        // Faction system
+        availableTargets: [],
+        factionBonuses: {},
+        targetSelectionMode: false,
+        selectedTarget: undefined,
+        factionEffects: {},
     });
 
     const myId = useMyId(ready);

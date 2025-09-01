@@ -36,4 +36,11 @@ export interface GameState {
     maxHandSize: number; // maximum cards in hand
     cardsDrawnThisTurn: Record<string, number>; // cards drawn by each player this turn
     canDrawCards: boolean; // whether current player can draw cards
+    
+    // Faction system
+    availableTargets: string[]; // playerIds that can be targeted
+    factionBonuses: Record<number, number>; // faction -> bonus power
+    targetSelectionMode: boolean; // whether player is selecting attack target
+    selectedTarget?: string; // currently selected target for attack
+    factionEffects: Record<number, string[]>; // faction -> list of effect descriptions
 }

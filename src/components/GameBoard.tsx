@@ -77,6 +77,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             maxHandSize: 6,
             cardsDrawnThisTurn: {},
             canDrawCards: true,
+            // Faction system
+            availableTargets: [],
+            factionBonuses: {},
+            targetSelectionMode: false,
+            selectedTarget: undefined,
+            factionEffects: {},
         }));
     };
 
