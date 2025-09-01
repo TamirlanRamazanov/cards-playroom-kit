@@ -4,6 +4,7 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import type { GameState } from "../types";
 import DropZone from "./DropZone";
 import GameHUD from "./GameHUD";
+import DuelSystem from "./DuelSystem";
 import { CARDS_DATA } from "../engine/cards";
 
 // Создаем тестовые данные для дебага
@@ -193,6 +194,36 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         // Логика взятия карт будет реализована позже
     };
 
+    // Duel Actions
+    const handleAttack = (attackingCard: any, targetPlayer: string) => {
+        console.log('Attack action:', { attackingCard, targetPlayer });
+        updateGame((prev) => ({
+            ...prev,
+            attackingCard,
+            attackTarget: targetPlayer,
+            defendingCard: null,
+        }));
+    };
+
+    const handleDefend = (defendingCard: any) => {
+        console.log('Defend action:', defendingCard);
+        updateGame((prev) => ({
+            ...prev,
+            defendingCard,
+        }));
+    };
+
+    const handleDuelPass = () => {
+        console.log('Duel pass action');
+        // Логика паса в дуэли будет реализована позже
+        updateGame((prev) => ({
+            ...prev,
+            attackingCard: null,
+            defendingCard: null,
+            attackTarget: undefined,
+        }));
+    };
+
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ 
@@ -219,6 +250,15 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     onEndTurn={handleEndTurn}
                     onPass={handlePass}
                     onTakeCards={handleTakeCards}
+                />
+
+                {/* Duel System */}
+                <DuelSystem
+                    myId={myId}
+                    game={gameState}
+                    onAttack={handleAttack}
+                    onDefend={handleDefend}
+                    onPass={handleDuelPass}
                 />
 
                 {/* Debug Header */}
@@ -367,7 +407,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна</div>
+                    <div>🔄 Drag & Drop активен | 💡 Кликните на карту для быстрого перемещения | 🎮 HUD система активна | ⚔️ Дуэльная система активна</div>
                 </div>
 
                 {/* Drag Overlay */}
