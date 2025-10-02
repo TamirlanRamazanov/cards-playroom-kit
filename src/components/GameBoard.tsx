@@ -930,14 +930,14 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         <button
                             onClick={onRestartToLobby}
                             style={{
-                                padding: "4px 8px",
-                                borderRadius: 4,
-                                border: "1px solid #ef4444",
-                                background: "#ef4444",
-                                color: "#fff",
+                                padding: "4px 8px !important",
+                                borderRadius: "4px !important",
+                                border: "1px solid #ef4444 !important",
+                                background: "#ef4444 !important",
+                                color: "#fff !important",
                                 cursor: "pointer",
-                                fontSize: 11,
-                                fontWeight: 500,
+                                fontSize: "11px !important",
+                                fontWeight: "500 !important",
                             }}
                         >
                             Завершить игру
@@ -950,13 +950,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                 <button
                                     onClick={() => setGameMode('attack')}
                                     style={{
-                                        padding: "4px 8px",
+                                        padding: "4px 8px !important",
                                         background: gameMode === 'attack' ? "#dc2626" : "#374151",
-                                        border: "none",
-                                        borderRadius: 4,
-                                        color: "#fff",
+                                        border: "none !important",
+                                        borderRadius: "4px !important",
+                                        color: "#fff !important",
                                         cursor: "pointer",
-                                        fontSize: 11,
+                                        fontSize: "11px !important",
                                         fontWeight: gameMode === 'attack' ? "bold" : "normal"
                                     }}
                                 >
@@ -965,13 +965,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                 <button
                                     onClick={() => setGameMode('defense')}
                                     style={{
-                                        padding: "4px 8px",
+                                        padding: "4px 8px !important",
                                         background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
-                                        border: "none",
-                                        borderRadius: 4,
-                                        color: "#fff",
+                                        border: "none !important",
+                                        borderRadius: "4px !important",
+                                        color: "#fff !important",
                                         cursor: "pointer",
-                                        fontSize: 11,
+                                        fontSize: "11px !important",
                                         fontWeight: gameMode === 'defense' ? "bold" : "normal"
                                     }}
                                 >
@@ -985,13 +985,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             onClick={handleBito}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed}
                                             style={{
-                                                padding: "4px 8px",
+                                                padding: "4px 8px !important",
                                                 background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "#374151" : "#f59e0b",
-                                                border: "none",
-                                                borderRadius: 4,
-                                                color: "#fff",
+                                                border: "none !important",
+                                                borderRadius: "4px !important",
+                                                color: "#fff !important",
                                                 cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "not-allowed" : "pointer",
-                                                fontSize: 11,
+                                                fontSize: "11px !important",
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1001,13 +1001,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             onClick={handlePas}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed}
                                             style={{
-                                                padding: "4px 8px",
+                                                padding: "4px 8px !important",
                                                 background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "#374151" : "#ef4444",
-                                                border: "none",
-                                                borderRadius: 4,
-                                                color: "#fff",
+                                                border: "none !important",
+                                                borderRadius: "4px !important",
+                                                color: "#fff !important",
                                                 cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "not-allowed" : "pointer",
-                                                fontSize: 11,
+                                                fontSize: "11px !important",
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1022,13 +1022,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             onClick={handleBito}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed}
                                             style={{
-                                                padding: "4px 8px",
+                                                padding: "4px 8px !important",
                                                 background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "#374151" : "#f59e0b",
-                                                border: "none",
-                                                borderRadius: 4,
-                                                color: "#fff",
+                                                border: "none !important",
+                                                borderRadius: "4px !important",
+                                                color: "#fff !important",
                                                 cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "not-allowed" : "pointer",
-                                                fontSize: 11,
+                                                fontSize: "11px !important",
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1038,13 +1038,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             onClick={handlePas}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed}
                                             style={{
-                                                padding: "4px 8px",
+                                                padding: "4px 8px !important",
                                                 background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "#374151" : "#ef4444",
-                                                border: "none",
-                                                borderRadius: 4,
-                                                color: "#fff",
+                                                border: "none !important",
+                                                borderRadius: "4px !important",
+                                                color: "#fff !important",
                                                 cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "not-allowed" : "pointer",
-                                                fontSize: 11,
+                                                fontSize: "11px !important",
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1061,7 +1061,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             alert('🛡️ Функция "Взять карты" будет реализована в следующей фазе');
                                         }}
                                         style={{
-                                            padding: "4px 8px",
+                                            padding: "4px 8px !important",
                                             background: "#10b981",
                                             border: "none",
                                             borderRadius: 4,
@@ -1088,7 +1088,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         const playerRole = game.playerRoles?.[pid];
                         return (
                             <div key={pid} style={{ 
-                                padding: "4px 8px", 
+                                padding: "4px 8px !important", 
                                 borderRadius: 999, 
                                 background: pid === myId ? "#065f46" : "#1f2937",
                                 border: pid === myId ? "1px solid #10b981" : "1px solid #374151",
@@ -1136,42 +1136,54 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         alignItems: "center"
                     }}>
                         <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
-                            🎮 Слоты на столе:
+                            🎮 Игровой стол:
                         </div>
-                        <DropZone
-                            id="table"
-                            cards={game.slots || []}
-                            minVisibleCards={1}
-                            gameMode={gameMode}
-                            onCardClick={(index) => {
-                                console.log('Clicked table card:', index);
-                            }}
-                            onCardHover={handleAttackCardHover}
-                            onCardLeave={handleAttackCardLeave}
-                            highlightedCardIndex={hoveredAttackCard}
-                            onMousePositionUpdate={() => {}}
-                            activeCard={activeCard}
-                            onDropZoneActivate={handleDropZoneActivate}
-                            onDropZoneDeactivate={handleDropZoneDeactivate}
-                            activeDropZone={activeDropZone}
-                        />
-                    </div>
+                        
+                        {/* Атакующие карты */}
+                        <div style={{ marginBottom: "16px" }}>
+                            <div style={{ fontSize: "14px", marginBottom: "8px", color: "#FFD700", textAlign: "center" }}>
+                                ⚔️ Атакующие карты:
+                            </div>
+                            <DropZone
+                                id="table"
+                                cards={game.slots || []}
+                                minVisibleCards={1}
+                                gameMode={gameMode}
+                                onCardClick={(index) => {
+                                    console.log('Clicked table card:', index);
+                                }}
+                                onCardHover={handleAttackCardHover}
+                                onCardLeave={handleAttackCardLeave}
+                                highlightedCardIndex={hoveredAttackCard}
+                                onMousePositionUpdate={() => {}}
+                                activeCard={activeCard}
+                                onDropZoneActivate={handleDropZoneActivate}
+                                onDropZoneDeactivate={handleDropZoneDeactivate}
+                                activeDropZone={activeDropZone}
+                            />
+                        </div>
 
-                    {/* Defense Zone */}
-                    {(game.slots || []).filter(slot => slot !== null).length > 0 && (
-                        <DefenseZone
-                            attackCards={game.slots || []}
-                            defenseCards={defenseCards}
-                            onCardClick={(attackIndex) => {
-                                console.log('Clicked defense card:', attackIndex);
-                            }}
-                            onCardHover={handleDefenseCardHover}
-                            onCardLeave={handleDefenseCardLeave}
-                            highlightedCardIndex={hoveredAttackCard}
-                            gameMode={gameMode}
-                            invalidDefenseCard={null}
-                        />
-                    )}
+                        {/* Защитные карты */}
+                        {(game.slots || []).filter(slot => slot !== null).length > 0 && (
+                            <div>
+                                <div style={{ fontSize: "14px", marginBottom: "8px", color: "#FFD700", textAlign: "center" }}>
+                                    🛡️ Защитные карты:
+                                </div>
+                                <DefenseZone
+                                    attackCards={game.slots || []}
+                                    defenseCards={defenseCards}
+                                    onCardClick={(attackIndex) => {
+                                        console.log('Clicked defense card:', attackIndex);
+                                    }}
+                                    onCardHover={handleDefenseCardHover}
+                                    onCardLeave={handleDefenseCardLeave}
+                                    highlightedCardIndex={hoveredAttackCard}
+                                    gameMode={gameMode}
+                                    invalidDefenseCard={null}
+                                />
+                            </div>
+                        )}
+                    </div>
             </div>
 
             {/* My hand */}
