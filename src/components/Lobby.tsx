@@ -1,4 +1,4 @@
-import type { GameState, Card } from "../types";
+import type { GameState } from "../types";
 import { CARDS_DATA } from "../engine/cards";
 import { useState } from "react";
 

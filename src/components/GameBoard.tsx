@@ -382,79 +382,79 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         });
     };
 
-    const rotateRolesAfterTakeCards = () => {
-        console.log('🎯 Смена ролей после взятия карт защитником');
-        
-        updateGame((prev) => {
-            const newState = { ...prev };
-            const playerIds = Object.keys(prev.players || {});
-            const playerCount = playerIds.length;
-            
-            if (playerCount === 2) {
-                // 2 игрока: роли не меняются
-                console.log('🎯 2 игрока - роли не меняются');
-            } else if (playerCount === 3) {
-                // 3 игрока: роли сдвигаются на 1 назад
-                const currentRoles = { ...prev.playerRoles };
-                const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-                
-                playerIds.forEach((playerId) => {
-                    const currentRole = currentRoles[playerId];
-                    let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
-                    
-                    if (currentRole === 'attacker') {
-                        newRole = 'co-attacker';
-                    } else if (currentRole === 'co-attacker') {
-                        newRole = 'defender';
-                    } else if (currentRole === 'defender') {
-                        newRole = 'attacker';
-                    } else {
-                        newRole = 'observer';
-                    }
-                    
-                    newRoles[playerId] = newRole;
-                });
-                
-                newState.playerRoles = newRoles;
-                console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
-            } else {
-                // 4+ игроков: роли сдвигаются на 2 вперед
-                const currentRoles = { ...prev.playerRoles };
-                const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-                
-                playerIds.forEach((playerId) => {
-                    const currentRole = currentRoles[playerId];
-                    let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
-                    
-                    if (currentRole === 'attacker') {
-                        newRole = 'co-attacker';
-                    } else if (currentRole === 'co-attacker') {
-                        newRole = 'defender';
-                    } else if (currentRole === 'defender') {
-                        newRole = 'observer';
-                    } else {
-                        // Находим следующего наблюдателя, который станет атакующим
-                        const observerIndex = playerIds.indexOf(playerId);
-                        const nextObserverIndex = (observerIndex + 1) % playerIds.length;
-                        const nextObserverId = playerIds[nextObserverIndex];
-                        
-                        if (currentRoles[nextObserverId] === 'observer') {
-                            newRole = 'attacker';
-                        } else {
-                            newRole = 'observer';
-                        }
-                    }
-                    
-                    newRoles[playerId] = newRole;
-                });
-                
-                newState.playerRoles = newRoles;
-                console.log('🎯 4+ игроков - роли сдвинуты на 2 вперед');
-            }
-            
-            return newState;
-        });
-    };
+    // const rotateRolesAfterTakeCards = () => {
+    //     console.log('🎯 Смена ролей после взятия карт защитником');
+    //     
+    //     updateGame((prev) => {
+    //         const newState = { ...prev };
+    //         const playerIds = Object.keys(prev.players || {});
+    //         const playerCount = playerIds.length;
+    //         
+    //         if (playerCount === 2) {
+    //             // 2 игрока: роли не меняются
+    //             console.log('🎯 2 игрока - роли не меняются');
+    //         } else if (playerCount === 3) {
+    //             // 3 игрока: роли сдвигаются на 1 назад
+    //             const currentRoles = { ...prev.playerRoles };
+    //             const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
+    //             
+    //             playerIds.forEach((playerId) => {
+    //                 const currentRole = currentRoles[playerId];
+    //                 let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
+    //                 
+    //                 if (currentRole === 'attacker') {
+    //                     newRole = 'co-attacker';
+    //                 } else if (currentRole === 'co-attacker') {
+    //                     newRole = 'defender';
+    //                 } else if (currentRole === 'defender') {
+    //                     newRole = 'attacker';
+    //                 } else {
+    //                     newRole = 'observer';
+    //                 }
+    //                 
+    //                 newRoles[playerId] = newRole;
+    //             });
+    //             
+    //             newState.playerRoles = newRoles;
+    //             console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
+    //         } else {
+    //             // 4+ игроков: роли сдвигаются на 2 вперед
+    //             const currentRoles = { ...prev.playerRoles };
+    //             const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
+    //             
+    //             playerIds.forEach((playerId) => {
+    //                 const currentRole = currentRoles[playerId];
+    //                 let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
+    //                 
+    //                 if (currentRole === 'attacker') {
+    //                     newRole = 'co-attacker';
+    //                 } else if (currentRole === 'co-attacker') {
+    //                     newRole = 'defender';
+    //                 } else if (currentRole === 'defender') {
+    //                     newRole = 'observer';
+    //                 } else {
+    //                     // Находим следующего наблюдателя, который станет атакующим
+    //                     const observerIndex = playerIds.indexOf(playerId);
+    //                     const nextObserverIndex = (observerIndex + 1) % playerIds.length;
+    //                     const nextObserverId = playerIds[nextObserverIndex];
+    //                     
+    //                     if (currentRoles[nextObserverId] === 'observer') {
+    //                         newRole = 'attacker';
+    //                     } else {
+    //                         newRole = 'observer';
+    //                     }
+    //                 }
+    //                 
+    //                 newRoles[playerId] = newRole;
+    //             });
+    //             
+    //             newState.playerRoles = newRoles;
+    //             console.log('🎯 4+ игроков - роли сдвинуты на 2 вперед');
+    //         }
+    //         
+    //         return newState;
+    //     });
+    // };
 
     // Функции для автоматического добора карт
     const addToDrawQueue = (playerId: string, isDefender: boolean = false) => {
