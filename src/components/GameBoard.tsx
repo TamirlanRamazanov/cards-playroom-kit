@@ -923,41 +923,176 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0b1020", color: "#fff" }}>
             {/* Header with players and game info */}
-            <div style={{ padding: 12, background: "#101826", position: "sticky", top: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>🎮 Игровая доска</h2>
+            <div style={{ padding: 8, background: "#101826", position: "sticky", top: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>🎮 Игровая доска</h2>
                         <button
                             onClick={onRestartToLobby}
                             style={{
-                                padding: "6px 12px",
-                                borderRadius: 6,
+                                padding: "4px 8px",
+                                borderRadius: 4,
                                 border: "1px solid #ef4444",
                                 background: "#ef4444",
                                 color: "#fff",
                                 cursor: "pointer",
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: 500,
                             }}
                         >
                             Завершить игру
                         </button>
+                        
+                        {/* Кнопки управления игрой */}
+                        {game.gameInitialized && (
+                            <>
+                                {/* Режимы игры */}
+                                <button
+                                    onClick={() => setGameMode('attack')}
+                                    style={{
+                                        padding: "4px 8px",
+                                        background: gameMode === 'attack' ? "#dc2626" : "#374151",
+                                        border: "none",
+                                        borderRadius: 4,
+                                        color: "#fff",
+                                        cursor: "pointer",
+                                        fontSize: 11,
+                                        fontWeight: gameMode === 'attack' ? "bold" : "normal"
+                                    }}
+                                >
+                                    ⚔️ Атака
+                                </button>
+                                <button
+                                    onClick={() => setGameMode('defense')}
+                                    style={{
+                                        padding: "4px 8px",
+                                        background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
+                                        border: "none",
+                                        borderRadius: 4,
+                                        color: "#fff",
+                                        cursor: "pointer",
+                                        fontSize: 11,
+                                        fontWeight: gameMode === 'defense' ? "bold" : "normal"
+                                    }}
+                                >
+                                    🛡️ Защита
+                                </button>
+                                
+                                {/* Кнопки для атакующих игроков */}
+                                {getCurrentPlayerRole() === 'attacker' && (
+                                    <>
+                                        <button
+                                            onClick={handleBito}
+                                            disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed}
+                                            style={{
+                                                padding: "4px 8px",
+                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "#374151" : "#f59e0b",
+                                                border: "none",
+                                                borderRadius: 4,
+                                                color: "#fff",
+                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "not-allowed" : "pointer",
+                                                fontSize: 11,
+                                                fontWeight: "bold"
+                                            }}
+                                        >
+                                            🚫 Бито
+                                        </button>
+                                        <button
+                                            onClick={handlePas}
+                                            disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed}
+                                            style={{
+                                                padding: "4px 8px",
+                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "#374151" : "#ef4444",
+                                                border: "none",
+                                                borderRadius: 4,
+                                                color: "#fff",
+                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "not-allowed" : "pointer",
+                                                fontSize: 11,
+                                                fontWeight: "bold"
+                                            }}
+                                        >
+                                            🛑 Пас
+                                        </button>
+                                    </>
+                                )}
+                                
+                                {getCurrentPlayerRole() === 'co-attacker' && (
+                                    <>
+                                        <button
+                                            onClick={handleBito}
+                                            disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed}
+                                            style={{
+                                                padding: "4px 8px",
+                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "#374151" : "#f59e0b",
+                                                border: "none",
+                                                borderRadius: 4,
+                                                color: "#fff",
+                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "not-allowed" : "pointer",
+                                                fontSize: 11,
+                                                fontWeight: "bold"
+                                            }}
+                                        >
+                                            🚫 Бито
+                                        </button>
+                                        <button
+                                            onClick={handlePas}
+                                            disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed}
+                                            style={{
+                                                padding: "4px 8px",
+                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "#374151" : "#ef4444",
+                                                border: "none",
+                                                borderRadius: 4,
+                                                color: "#fff",
+                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "not-allowed" : "pointer",
+                                                fontSize: 11,
+                                                fontWeight: "bold"
+                                            }}
+                                        >
+                                            🛑 Пас
+                                        </button>
+                                    </>
+                                )}
+                                
+                                {/* Кнопка для защитника */}
+                                {getCurrentPlayerRole() === 'defender' && (
+                                    <button
+                                        onClick={() => {
+                                            // TODO: Реализовать взятие карт защитником
+                                            alert('🛡️ Функция "Взять карты" будет реализована в следующей фазе');
+                                        }}
+                                        style={{
+                                            padding: "4px 8px",
+                                            background: "#10b981",
+                                            border: "none",
+                                            borderRadius: 4,
+                                            color: "#fff",
+                                            cursor: "pointer",
+                                            fontSize: 11,
+                                            fontWeight: "bold"
+                                        }}
+                                    >
+                                        🛡️ Взять карты
+                                    </button>
+                                )}
+                            </>
+                        )}
                     </div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
+                    <div style={{ fontSize: 10, opacity: 0.7 }}>
                         Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck?.length || 0} | Сброс: {game.discardPile?.length || 0}
                     </div>
                 </div>
                 
                 {/* Players with roles */}
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
                     {playerIds.map((pid) => {
                         const playerRole = game.playerRoles?.[pid];
                         return (
                             <div key={pid} style={{ 
-                                padding: "6px 10px", 
+                                padding: "4px 8px", 
                                 borderRadius: 999, 
                                 background: pid === myId ? "#065f46" : "#1f2937",
-                                border: pid === myId ? "2px solid #10b981" : "1px solid #374151"
+                                border: pid === myId ? "1px solid #10b981" : "1px solid #374151",
+                                fontSize: 11
                             }}>
                             {game.players[pid]?.name || pid}
                             {pid === myId ? " • вы" : ""}
@@ -970,157 +1105,22 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 
                 {/* Game status */}
                 {game.gameInitialized && (
-                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
-                        <div>🎯 Приоритет атаки: {game.attackPriority === 'attacker' ? '⚔️ Главный атакующий' : '🗡️ Со-атакующий'}</div>
-                        <div>🎲 Главный атакующий играл: {game.mainAttackerHasPlayed ? '✅' : '❌'}</div>
+                    <div style={{ marginTop: 4, fontSize: 10, opacity: 0.7 }}>
+                        <div>🎯 Приоритет: {game.attackPriority === 'attacker' ? '⚔️ Главный' : '🗡️ Со-атакующий'}</div>
+                        <div>🎲 Играл: {game.mainAttackerHasPlayed ? '✅' : '❌'}</div>
                         {game.firstPlayerInfo && (
-                            <div>🏆 Первый игрок: {game.firstPlayerInfo.playerName} ({game.firstPlayerInfo.cardName})</div>
+                            <div>🏆 Первый: {game.firstPlayerInfo.playerName}</div>
                         )}
                         {activeFactions.length > 0 && (
-                            <div>⚔️ Активные фракции: {activeFactions.join(', ')}</div>
+                            <div>⚔️ Фракции: {activeFactions.join(', ')}</div>
                         )}
                         {game.drawQueue && game.drawQueue.length > 0 && (
-                            <div>🎯 Очередь добора: {game.drawQueue.length} игроков</div>
+                            <div>🎯 Добор: {game.drawQueue.length}</div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Game controls */}
-            {game.gameInitialized && (
-                <div style={{ padding: 12, background: "#111826", borderBottom: "1px solid #374151" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
-                        {/* Режимы игры */}
-                        <button
-                            onClick={() => setGameMode('attack')}
-                    style={{
-                                padding: "8px 16px",
-                                background: gameMode === 'attack' ? "#dc2626" : "#374151",
-                                border: "none",
-                                borderRadius: 6,
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: 14,
-                                fontWeight: gameMode === 'attack' ? "bold" : "normal"
-                            }}
-                        >
-                            ⚔️ Атака
-                        </button>
-                        <button
-                            onClick={() => setGameMode('defense')}
-                            style={{
-                                padding: "8px 16px",
-                                background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
-                                border: "none",
-                                borderRadius: 6,
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: 14,
-                                fontWeight: gameMode === 'defense' ? "bold" : "normal"
-                            }}
-                        >
-                            🛡️ Защита
-                        </button>
-                        
-                        {/* Кнопки для атакующих игроков */}
-                        {getCurrentPlayerRole() === 'attacker' && (
-                            <>
-                                <button
-                                    onClick={handleBito}
-                                    disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed}
-                                    style={{
-                                        padding: "8px 16px",
-                                        background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "#374151" : "#f59e0b",
-                                        border: "none",
-                                        borderRadius: 6,
-                                        color: "#fff",
-                                        cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "not-allowed" : "pointer",
-                                        fontSize: 14,
-                                        fontWeight: "bold"
-                                    }}
-                                >
-                                    🚫 Бито
-                                </button>
-                                <button
-                                    onClick={handlePas}
-                                    disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed}
-                                    style={{
-                                        padding: "8px 16px",
-                                        background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "#374151" : "#ef4444",
-                                        border: "none",
-                                        borderRadius: 6,
-                                        color: "#fff",
-                                        cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "not-allowed" : "pointer",
-                                        fontSize: 14,
-                                        fontWeight: "bold"
-                                    }}
-                                >
-                                    🛑 Пас
-                                </button>
-                            </>
-                        )}
-                        
-                        {getCurrentPlayerRole() === 'co-attacker' && (
-                            <>
-                                <button
-                                    onClick={handleBito}
-                                    disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed}
-                                    style={{
-                                        padding: "8px 16px",
-                                        background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "#374151" : "#f59e0b",
-                                        border: "none",
-                                        borderRadius: 6,
-                                        color: "#fff",
-                                        cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "not-allowed" : "pointer",
-                                        fontSize: 14,
-                                        fontWeight: "bold"
-                                    }}
-                                >
-                                    🚫 Бито
-                                </button>
-                                <button
-                                    onClick={handlePas}
-                                    disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed}
-                                    style={{
-                                        padding: "8px 16px",
-                                        background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "#374151" : "#ef4444",
-                                        border: "none",
-                                        borderRadius: 6,
-                                        color: "#fff",
-                                        cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "not-allowed" : "pointer",
-                                        fontSize: 14,
-                                        fontWeight: "bold"
-                                    }}
-                                >
-                                    🛑 Пас
-                                </button>
-                            </>
-                        )}
-                        
-                        {/* Кнопка для защитника */}
-                        {getCurrentPlayerRole() === 'defender' && (
-                            <button
-                                onClick={() => {
-                                    // TODO: Реализовать взятие карт защитником
-                                    alert('🛡️ Функция "Взять карты" будет реализована в следующей фазе');
-                                }}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#10b981",
-                                    border: "none",
-                                    borderRadius: 6,
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: 14,
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                🛡️ Взять карты
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Center slots */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px" }}>
