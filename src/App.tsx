@@ -4,7 +4,7 @@ import type { GameState } from "./types";
 import GameBoard from "./components/GameBoard";
 import MainMenu from "./components/MainMenu";
 import DebugGameBoard from "./components/DebugGameBoard";
-import DebugGameBoardV2 from "./components/DebugGameBoardV2";
+// import DebugGameBoardV2 from "./components/DebugGameBoardV2";
 import { CARDS_DATA } from "./engine/cards";
 
 // myId станет доступен после insertCoin()
@@ -19,14 +19,14 @@ function useMyId(ready: boolean): string {
 }
 
 // Функция для перемешивания колоды
-const shuffleDeck = <T>(array: T[]): T[] => {
+function shuffleDeck<T>(array: T[]): T[] {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
-};
+}
 
 // Функция для определения первого игрока по самой слабой карте
 const determineFirstPlayer = (hands: GameState["hands"], players: GameState["players"]): {playerId: string, playerName: string, cardName: string, power: number} => {
@@ -209,6 +209,7 @@ export default function App() {
         players: {},
         hands: {},
         slots: [],
+        defenseSlots: [],
         playerCountAtStart: undefined,
         winnerId: undefined,
         startedAt: undefined,
@@ -224,10 +225,34 @@ export default function App() {
         targetSelectionMode: false,
         selectedTarget: undefined,
         factionEffects: {},
-        // Card power system
-        minCardRank: 50,
-        maxCardRank: 100,
-        canDefendWithEqualRank: true,
+        activeFactions: [],
+        // Card power system (align with GameState)
+        minCardPower: 50,
+        maxCardPower: 100,
+        canDefendWithEqualPower: true,
+        // Turn control system
+        turnActions: {
+            canEndTurn: false,
+            canPass: false,
+            canTakeCards: false,
+            canAttack: false,
+            canDefend: false,
+        },
+        turnHistory: [],
+        // Role system defaults
+        playerRoles: {},
+        attackPriority: 'attacker',
+        mainAttackerHasPlayed: false,
+        attackerPassed: false,
+        coAttackerPassed: false,
+        attackerBitoPressed: false,
+        coAttackerBitoPressed: false,
+        attackerPasPressed: false,
+        coAttackerPasPressed: false,
+        // Draw queue
+        drawQueue: [],
+        // Game initialization
+        gameInitialized: false,
     });
 
     const myId = useMyId(ready);
@@ -274,7 +299,7 @@ export default function App() {
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
-        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} />;
+        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} onDebugGameV2={() => setCurrentPage("debug")} />;
     }
 
     // Отображаем страницу входа
