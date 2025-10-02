@@ -15,6 +15,17 @@ interface Props {
 }
 
 export default function GameBoard({ myId, game, updateGame }: Props) {
+    // Inline styles as fallback for Vercel compatibility
+    const gameButtonStyle = {
+        borderRadius: '4px',
+        padding: '4px 8px',
+        fontSize: '11px',
+        border: 'none',
+        color: '#fff',
+        cursor: 'pointer',
+        fontWeight: '500',
+        transition: 'all 0.2s ease',
+    } as React.CSSProperties;
     const playerIds = Object.keys(game.players || {});
     const myHand = game.hands[myId] || [];
 
@@ -929,15 +940,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>🎮 Игровая доска</h2>
                         <button
                             onClick={onRestartToLobby}
+                            className="game-button game-button-primary"
                             style={{
-                                padding: "4px 8px !important",
-                                borderRadius: "4px !important",
-                                border: "1px solid #ef4444 !important",
-                                background: "#ef4444 !important",
-                                color: "#fff !important",
-                                cursor: "pointer",
-                                fontSize: "11px !important",
-                                fontWeight: "500 !important",
+                                ...gameButtonStyle,
+                                backgroundColor: '#ef4444',
+                                border: "1px solid #ef4444",
                             }}
                         >
                             Завершить игру
@@ -949,14 +956,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                 {/* Режимы игры */}
                                 <button
                                     onClick={() => setGameMode('attack')}
+                                    className={`game-button ${gameMode === 'attack' ? 'game-button-attack' : 'game-button-secondary'}`}
                                     style={{
-                                        padding: "4px 8px !important",
-                                        background: gameMode === 'attack' ? "#dc2626" : "#374151",
-                                        border: "none !important",
-                                        borderRadius: "4px !important",
-                                        color: "#fff !important",
-                                        cursor: "pointer",
-                                        fontSize: "11px !important",
+                                        ...gameButtonStyle,
+                                        backgroundColor: gameMode === 'attack' ? '#dc2626' : '#374151',
                                         fontWeight: gameMode === 'attack' ? "bold" : "normal"
                                     }}
                                 >
@@ -964,14 +967,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                 </button>
                                 <button
                                     onClick={() => setGameMode('defense')}
+                                    className={`game-button ${gameMode === 'defense' ? 'game-button-defense' : 'game-button-secondary'}`}
                                     style={{
-                                        padding: "4px 8px !important",
-                                        background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
-                                        border: "none !important",
-                                        borderRadius: "4px !important",
-                                        color: "#fff !important",
-                                        cursor: "pointer",
-                                        fontSize: "11px !important",
+                                        ...gameButtonStyle,
+                                        backgroundColor: gameMode === 'defense' ? '#1d4ed8' : '#374151',
                                         fontWeight: gameMode === 'defense' ? "bold" : "normal"
                                     }}
                                 >
@@ -984,14 +983,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                         <button
                                             onClick={handleBito}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed}
+                                            className={`game-button ${(!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? 'game-button-secondary' : 'game-button-bito'}`}
                                             style={{
-                                                padding: "4px 8px !important",
-                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "#374151" : "#f59e0b",
-                                                border: "none !important",
-                                                borderRadius: "4px !important",
-                                                color: "#fff !important",
-                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? "not-allowed" : "pointer",
-                                                fontSize: "11px !important",
+                                                ...gameButtonStyle,
+                                                backgroundColor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerBitoPressed || game.attackerPassed) ? '#374151' : '#f59e0b',
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1000,14 +995,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                         <button
                                             onClick={handlePas}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed}
+                                            className={`game-button ${(!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? 'game-button-secondary' : 'game-button-pas'}`}
                                             style={{
-                                                padding: "4px 8px !important",
-                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "#374151" : "#ef4444",
-                                                border: "none !important",
-                                                borderRadius: "4px !important",
-                                                color: "#fff !important",
-                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? "not-allowed" : "pointer",
-                                                fontSize: "11px !important",
+                                                ...gameButtonStyle,
+                                                backgroundColor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.attackerPasPressed) ? '#374151' : '#ef4444',
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1021,14 +1012,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                         <button
                                             onClick={handleBito}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed}
+                                            className={`game-button ${(!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? 'game-button-secondary' : 'game-button-bito'}`}
                                             style={{
-                                                padding: "4px 8px !important",
-                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "#374151" : "#f59e0b",
-                                                border: "none !important",
-                                                borderRadius: "4px !important",
-                                                color: "#fff !important",
-                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? "not-allowed" : "pointer",
-                                                fontSize: "11px !important",
+                                                ...gameButtonStyle,
+                                                backgroundColor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerBitoPressed || game.coAttackerPassed) ? '#374151' : '#f59e0b',
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1037,14 +1024,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                         <button
                                             onClick={handlePas}
                                             disabled={!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed}
+                                            className={`game-button ${(!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? 'game-button-secondary' : 'game-button-pas'}`}
                                             style={{
-                                                padding: "4px 8px !important",
-                                                background: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "#374151" : "#ef4444",
-                                                border: "none !important",
-                                                borderRadius: "4px !important",
-                                                color: "#fff !important",
-                                                cursor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? "not-allowed" : "pointer",
-                                                fontSize: "11px !important",
+                                                ...gameButtonStyle,
+                                                backgroundColor: (!game.mainAttackerHasPlayed || hasUnbeatenCards() || game.coAttackerPasPressed) ? '#374151' : '#ef4444',
                                                 fontWeight: "bold"
                                             }}
                                         >
@@ -1060,14 +1043,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                             // TODO: Реализовать взятие карт защитником
                                             alert('🛡️ Функция "Взять карты" будет реализована в следующей фазе');
                                         }}
+                                        className="game-button game-button-take"
                                         style={{
-                                            padding: "4px 8px !important",
-                                            background: "#10b981",
-                                            border: "none",
-                                            borderRadius: 4,
-                                            color: "#fff",
-                                            cursor: "pointer",
-                                            fontSize: 11,
+                                            ...gameButtonStyle,
+                                            backgroundColor: '#10b981',
                                             fontWeight: "bold"
                                         }}
                                     >
@@ -1131,8 +1110,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         borderRadius: "12px",
                         border: "2px solid #4B5563",
                         marginBottom: "12px",
-                        display: "flex",
-                        flexDirection: "column",
+                                display: "flex",
+                                flexDirection: "column",
                         alignItems: "center"
                     }}>
                         <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
@@ -1168,7 +1147,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             <div>
                                 <div style={{ fontSize: "14px", marginBottom: "8px", color: "#FFD700", textAlign: "center" }}>
                                     🛡️ Защитные карты:
-                                </div>
+                                    </div>
                                 <DefenseZone
                                     attackCards={game.slots || []}
                                     defenseCards={defenseCards}
@@ -1181,9 +1160,9 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     gameMode={gameMode}
                                     invalidDefenseCard={null}
                                 />
-                            </div>
-                        )}
-                    </div>
+                                    </div>
+                            )}
+                </div>
             </div>
 
             {/* My hand */}

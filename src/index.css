@@ -1,3 +1,22 @@
+:root {
+  /* Game button variables for consistent styling */
+  --game-button-padding: 4px 8px;
+  --game-button-font-size: 11px;
+  --game-button-border-radius: 4px;
+  --game-button-font-weight: 500;
+  --game-button-transition: all 0.2s ease;
+  
+  /* Game button colors */
+  --game-button-primary-bg: #ef4444;
+  --game-button-secondary-bg: #374151;
+  --game-button-attack-bg: #dc2626;
+  --game-button-defense-bg: #1d4ed8;
+  --game-button-bito-bg: #f59e0b;
+  --game-button-pas-bg: #ef4444;
+  --game-button-take-bg: #10b981;
+  --game-button-text-color: #fff;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -50,6 +69,109 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Game-specific button styles with maximum specificity */
+button.game-button {
+  border-radius: var(--game-button-border-radius) !important;
+  padding: var(--game-button-padding) !important;
+  font-size: var(--game-button-font-size) !important;
+  border: none !important;
+  color: var(--game-button-text-color) !important;
+  cursor: pointer !important;
+  font-weight: var(--game-button-font-weight) !important;
+  transition: var(--game-button-transition) !important;
+  background-color: var(--game-button-secondary-bg) !important;
+}
+
+button.game-button:hover {
+  opacity: 0.8 !important;
+  transform: translateY(-1px) !important;
+}
+
+button.game-button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+button.game-button.game-button-primary {
+  background-color: var(--game-button-primary-bg) !important;
+}
+
+button.game-button.game-button-secondary {
+  background-color: var(--game-button-secondary-bg) !important;
+}
+
+button.game-button.game-button-attack {
+  background-color: var(--game-button-attack-bg) !important;
+}
+
+button.game-button.game-button-defense {
+  background-color: var(--game-button-defense-bg) !important;
+}
+
+button.game-button.game-button-bito {
+  background-color: var(--game-button-bito-bg) !important;
+}
+
+button.game-button.game-button-pas {
+  background-color: var(--game-button-pas-bg) !important;
+}
+
+button.game-button.game-button-take {
+  background-color: var(--game-button-take-bg) !important;
+}
+
+/* Extra specificity for Vercel compatibility */
+#root button.game-button,
+body button.game-button,
+html body button.game-button {
+  border-radius: var(--game-button-border-radius) !important;
+  padding: var(--game-button-padding) !important;
+  font-size: var(--game-button-font-size) !important;
+  border: none !important;
+  color: var(--game-button-text-color) !important;
+  cursor: pointer !important;
+  font-weight: var(--game-button-font-weight) !important;
+  transition: var(--game-button-transition) !important;
+  background-color: var(--game-button-secondary-bg) !important;
+}
+
+#root button.game-button.game-button-primary,
+body button.game-button.game-button-primary,
+html body button.game-button.game-button-primary {
+  background-color: var(--game-button-primary-bg) !important;
+}
+
+#root button.game-button.game-button-attack,
+body button.game-button.game-button-attack,
+html body button.game-button.game-button-attack {
+  background-color: var(--game-button-attack-bg) !important;
+}
+
+#root button.game-button.game-button-defense,
+body button.game-button.game-button-defense,
+html body button.game-button.game-button-defense {
+  background-color: var(--game-button-defense-bg) !important;
+}
+
+#root button.game-button.game-button-bito,
+body button.game-button.game-button-bito,
+html body button.game-button.game-button-bito {
+  background-color: var(--game-button-bito-bg) !important;
+}
+
+#root button.game-button.game-button-pas,
+body button.game-button.game-button-pas,
+html body button.game-button.game-button-pas {
+  background-color: var(--game-button-pas-bg) !important;
+}
+
+#root button.game-button.game-button-take,
+body button.game-button.game-button-take,
+html body button.game-button.game-button-take {
+  background-color: var(--game-button-take-bg) !important;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -60,5 +182,39 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+  
+  /* Override game buttons for light theme */
+  button.game-button {
+    background-color: var(--game-button-secondary-bg) !important;
+    color: var(--game-button-text-color) !important;
+  }
+  
+  button.game-button.game-button-primary {
+    background-color: var(--game-button-primary-bg) !important;
+  }
+  
+  button.game-button.game-button-secondary {
+    background-color: var(--game-button-secondary-bg) !important;
+  }
+  
+  button.game-button.game-button-attack {
+    background-color: var(--game-button-attack-bg) !important;
+  }
+  
+  button.game-button.game-button-defense {
+    background-color: var(--game-button-defense-bg) !important;
+  }
+  
+  button.game-button.game-button-bito {
+    background-color: var(--game-button-bito-bg) !important;
+  }
+  
+  button.game-button.game-button-pas {
+    background-color: var(--game-button-pas-bg) !important;
+  }
+  
+  button.game-button.game-button-take {
+    background-color: var(--game-button-take-bg) !important;
   }
 }
