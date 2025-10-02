@@ -15,14 +15,14 @@ export default function Lobby({ myId, game, updateGame }: Props) {
     const [showFirstPlayerModal, setShowFirstPlayerModal] = useState<boolean>(false);
 
     // Функция для случайного перемешивания колоды (без seed)
-    const shuffleDeck = <T>(array: T[]): T[] => {
+    function shuffleDeck<T>(array: T[]): T[] {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
-    };
+    }
 
     // Функция для создания базового состояния игры
     const createBasicGameState = (playerCount: number): Partial<GameState> => {
