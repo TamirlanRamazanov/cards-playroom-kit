@@ -164,7 +164,7 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
     const [dropZoneTimeout, setDropZoneTimeout] = useState<number | null>(null); // Таймаут для задержки деактивации drop zone
     const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null); // Индекс невалидной карты защиты
     const [canTakeCards, setCanTakeCards] = useState<boolean>(false); // Можно ли взять карты
-    const [activeFactions, setActiveFactions] = useState<string[]>([]);
+    // const [activeFactions, setActiveFactions] = useState<string[]>([]);
     
     // Счётчик фракций: {factionId: count}
     const [factionCounter, setFactionCounter] = useState<Record<number, number>>({}); // Активные фракции (названия)
@@ -375,7 +375,7 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
     // Функция для установки активных фракций из карты
     const setActiveFactionsFromCard = (card: Card) => {
         const factionNames = getFactionNames(card.factions);
-        setActiveFactions(factionNames);
+        // setActiveFactions(factionNames);
         setActiveFirstAttackFactions(card.factions); // Устанавливаем активные фракции первой карты
         console.log(`🎯 Установлены активные фракции:`, factionNames);
         console.log(`🎯 Установлены активные фракции первой карты:`, card.factions);
@@ -477,15 +477,15 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
             console.log(`🎯 Восстановлены фракции защиты из буфера:`, Object.keys(buffer).map(id => `${FACTIONS[parseInt(id)]}(${buffer[parseInt(id)]})`));
             
             // Обновляем активные фракции на основе нового счётчика
-            const newActiveFactions = Object.keys(newCounter)
-                .map(id => parseInt(id))
-                .filter(id => newCounter[id] > 0)
-                .map(id => {
-                    const factionEntry = Object.entries(FACTIONS).find(([_, name]) => name === FACTIONS[id]);
-                    return factionEntry ? FACTIONS[id] : `Unknown ${id}`;
-                });
+            // const newActiveFactions = Object.keys(newCounter)
+            //     .map(id => parseInt(id))
+            //     .filter(id => newCounter[id] > 0)
+            //     .map(id => {
+            //         const factionEntry = Object.entries(FACTIONS).find(([_, name]) => name === FACTIONS[id]);
+            //         return factionEntry ? FACTIONS[id] : `Unknown ${id}`;
+            //     });
             
-            setActiveFactions(newActiveFactions);
+            // setActiveFactions(newActiveFactions);
             
             return newCounter;
         });
@@ -519,7 +519,7 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
         const intersection = getFactionIntersection(card.factions, firstAttackFactions);
         const newActiveFactions = getFactionNames(intersection);
         
-        setActiveFactions(newActiveFactions);
+        // setActiveFactions(newActiveFactions);
         
         // Обновляем активные фракции первой карты - только пересекающиеся
         setActiveFirstAttackFactions(intersection);
@@ -553,10 +553,10 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
 
         // Все фракции карты защиты становятся активными
         const factionNames = getFactionNames(card.factions);
-        setActiveFactions(prev => {
-            const newFactions = [...new Set([...prev, ...factionNames])];
-            return newFactions;
-        });
+        // setActiveFactions(prev => {
+        //     const newFactions = [...new Set([...prev, ...factionNames])];
+        //     return newFactions;
+        // });
         
         // Обновляем счётчик
         updateFactionCounter(card.factions, 1);
@@ -706,7 +706,7 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
                     return factionEntry ? FACTIONS[id] : `Unknown ${id}`;
                 });
             
-            setActiveFactions(allActiveFactions);
+            // setActiveFactions(allActiveFactions);
             
             console.log(`🎯 Атакующая карта прикреплена через защитную. Пересечение:`, intersectionNames);
             console.log(`🎯 Фракции первой карты атаки:`, firstAttackFactionNames);
@@ -1090,7 +1090,7 @@ const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
         setActiveDropZone(null);
         setInvalidDefenseCard(null);
         setCanTakeCards(false);
-        setActiveFactions([]); // Сбрасываем активные фракции
+        // setActiveFactions([]); // Сбрасываем активные фракции
         setFactionCounter({}); // Сбрасываем счётчик фракций
         setDefenseFactionsBuffer({}); // Сбрасываем буфер фракций защиты
         setActiveFirstAttackFactions([]); // Сбрасываем активные фракции первой карты

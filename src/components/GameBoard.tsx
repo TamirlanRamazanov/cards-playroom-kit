@@ -3,7 +3,7 @@ import GameOverModal from "./GameOverModal";
 import { useState, useEffect } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
-import DraggableCard from "./DraggableCard";
+// import DraggableCard from "./DraggableCard";
 import DropZone from "./DropZone";
 import DefenseZone from "./DefenseZone";
 import { FACTIONS } from "../engine/cards";
@@ -21,12 +21,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // Состояния для drag&drop
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
-    const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+    // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
-    const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
-    const [canTakeCards, setCanTakeCards] = useState<boolean>(false);
+    // const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
+    // const [canTakeCards, setCanTakeCards] = useState<boolean>(false);
     const [defenseCards, setDefenseCards] = useState<(Card | null)[]>([]); // Локальное состояние для отображения карт защиты
-    const [isUpdatingDefenseCards, setIsUpdatingDefenseCards] = useState<boolean>(false); // Флаг для предотвращения конфликтов
+    const [isUpdatingDefenseCards] = useState<boolean>(false); // Флаг для предотвращения конфликтов
     
     // Состояния для игровой логики
     const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
@@ -1149,7 +1149,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             onCardHover={handleAttackCardHover}
                             onCardLeave={handleAttackCardLeave}
                             highlightedCardIndex={hoveredAttackCard}
-                            onMousePositionUpdate={setMousePosition}
+                            onMousePositionUpdate={() => {}}
                             activeCard={activeCard}
                             onDropZoneActivate={handleDropZoneActivate}
                             onDropZoneDeactivate={handleDropZoneDeactivate}
@@ -1169,7 +1169,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             onCardLeave={handleDefenseCardLeave}
                             highlightedCardIndex={hoveredAttackCard}
                             gameMode={gameMode}
-                            invalidDefenseCard={invalidDefenseCard}
+                            invalidDefenseCard={null}
                         />
                     )}
             </div>
