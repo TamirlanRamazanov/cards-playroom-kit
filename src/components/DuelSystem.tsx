@@ -1,177 +1,183 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GameState } from '../types';
 
 interface DuelSystemProps {
-    myId: string;
     game: GameState;
 }
 
 const DuelSystem: React.FC<DuelSystemProps> = ({
-    myId,
     game
 }) => {
-    const { attackingCard, defendingCard, attackTarget } = game;
-    const isUnderAttack = attackTarget === myId;
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const { attackingCard, defendingCard, attackTarget, players } = game;
+    
+    const hasActiveDuel = attackingCard || defendingCard || attackTarget;
 
-    // Показываем дуэль только если она активна
-    if (!attackingCard && !isUnderAttack) {
+    // Показываем дуэльную систему только если есть активная дуэль
+    if (!hasActiveDuel) {
         return null;
     }
 
     return (
         <div style={{
             position: "fixed",
-            top: "20px",
-            right: "20px",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
             background: "rgba(26, 26, 46, 0.95)",
             backdropFilter: "blur(10px)",
-            border: "2px solid #8B0000",
+            border: "2px solid #DC143C",
             borderRadius: "12px",
-            padding: "16px",
             color: "#fff",
-            zIndex: 300,
-            minWidth: "300px",
-            maxWidth: "400px"
+            zIndex: 250,
+            minWidth: isCollapsed ? "60px" : "400px",
+            maxWidth: isCollapsed ? "60px" : "500px",
+            transition: "all 0.3s ease"
         }}>
-            {/* Duel Header */}
+            {/* Header with Collapse Button */}
             <div style={{
-                textAlign: "center",
-                marginBottom: "16px",
-                paddingBottom: "12px",
-                borderBottom: "2px solid #8B0000"
-            }}>
-                <h3 style={{ margin: 0, color: "#FFD700", fontSize: "18px" }}>
-                    ⚔️ ДУЭЛЬ
-                </h3>
-                {attackingCard && attackTarget && (
-                    <div style={{ marginTop: "8px", fontSize: "14px" }}>
-                        <span style={{ color: "#DC143C" }}>
-                            {game.players[attackTarget]?.name || attackTarget}
-                        </span>
-                        {" атакует "}
-                        <span style={{ color: "#FFD700" }}>
-                            {game.players[myId]?.name || myId}
-                        </span>
-                    </div>
-                )}
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                borderBottom: isCollapsed ? "none" : "2px solid #DC143C",
+                cursor: "pointer"
+            }} onClick={() => setIsCollapsed(!isCollapsed)}>
+                <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "8px",
+                    opacity: isCollapsed ? 0 : 1,
+                    transition: "opacity 0.3s ease"
+                }}>
+                    <h3 style={{ margin: 0, color: "#DC143C", fontSize: "18px" }}>
+                        ⚔️ ДУЭЛЬ
+                    </h3>
+                </div>
+                <button
+                    style={{
+                        background: "none",
+                        border: "none",
+                        color: "#DC143C",
+                        fontSize: "18px",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        transition: "transform 0.3s ease"
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCollapsed(!isCollapsed);
+                    }}
+                >
+                    {isCollapsed ? "▶️" : "◀️"}
+                </button>
             </div>
 
-            {/* Attacking Card Display */}
-            {attackingCard && (
-                <div style={{
-                    background: "rgba(220, 20, 60, 0.1)",
-                    border: "2px solid #DC143C",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    marginBottom: "12px",
-                    textAlign: "center"
-                }}>
-                    <div style={{ fontSize: "12px", color: "#DC143C", marginBottom: "6px" }}>
-                        🗡️ АТАКУЮЩАЯ КАРТА
-                    </div>
+            {!isCollapsed && (
+                <>
+                    {/* Duel Status */}
                     <div style={{
-                        background: "linear-gradient(135deg, #2a2a4e 0%, #1e1e3e 100%)",
-                        border: "2px solid #DC143C",
-                        borderRadius: "6px",
-                        padding: "8px",
-                        display: "inline-block"
+                        background: "rgba(0, 0, 0, 0.3)",
+                        border: "1px solid #DC143C",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        margin: "12px",
+                        textAlign: "center"
                     }}>
-                        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "2px" }}>
-                            {attackingCard.name}
+                        <div style={{ fontSize: "12px", color: "#DC143C", marginBottom: "8px" }}>
+                            🎯 СТАТУС ДУЭЛИ
                         </div>
-                        <div style={{ fontSize: "16px", color: "#DC143C", fontWeight: "bold" }}>
-                            {attackingCard.power}
-                        </div>
-                    </div>
-                </div>
-            )}
+                        
+                        {attackingCard && (
+                            <div style={{ marginBottom: "8px" }}>
+                                <div style={{ fontSize: "11px", color: "#DC143C", marginBottom: "4px" }}>
+                                    🗡️ Атакующая карта:
+                                </div>
+                                <div style={{
+                                    background: "rgba(220, 20, 60, 0.1)",
+                                    border: "1px solid #DC143C",
+                                    borderRadius: "6px",
+                                    padding: "8px",
+                                    fontSize: "12px"
+                                }}>
+                                    <span style={{ fontWeight: "bold" }}>{attackingCard.name}</span>
+                                    {" - Сила: "}
+                                    <span style={{ color: "#DC143C" }}>{attackingCard.power}</span>
+                                    {" (Ранг: "}
+                                    <span style={{ color: "#FFD700" }}>{attackingCard.power}</span>
+                                    {")"}
+                                </div>
+                            </div>
+                        )}
 
-            {/* Defending Card Display */}
-            {defendingCard && (
-                <div style={{
-                    background: "rgba(65, 105, 225, 0.1)",
-                    border: "2px solid #4169E1",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    marginBottom: "12px",
-                    textAlign: "center"
-                }}>
-                    <div style={{ fontSize: "12px", color: "#4169E1", marginBottom: "6px" }}>
-                        🛡️ ЗАЩИЩАЮЩАЯ КАРТА
-                    </div>
-                    <div style={{
-                        background: "linear-gradient(135deg, #2a2a4e 0%, #1e1e3e 100%)",
-                        border: "2px solid #4169E1",
-                        borderRadius: "6px",
-                        padding: "8px",
-                        display: "inline-block"
-                    }}>
-                        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "2px" }}>
-                            {defendingCard.name}
-                        </div>
-                        <div style={{ fontSize: "16px", color: "#4169E1", fontWeight: "bold" }}>
-                            {defendingCard.power}
-                        </div>
-                    </div>
-                </div>
-            )}
+                        {defendingCard && (
+                            <div style={{ marginBottom: "8px" }}>
+                                <div style={{ fontSize: "11px", color: "#4169E1", marginBottom: "4px" }}>
+                                    🛡️ Защищающая карта:
+                                </div>
+                                <div style={{
+                                    background: "rgba(65, 105, 225, 0.1)",
+                                    border: "1px solid #4169E1",
+                                    borderRadius: "6px",
+                                    padding: "8px",
+                                    fontSize: "12px"
+                                }}>
+                                    <span style={{ fontWeight: "bold" }}>{defendingCard.name}</span>
+                                    {" - Сила: "}
+                                    <span style={{ color: "#4169E1" }}>{defendingCard.power}</span>
+                                    {" (Ранг: "}
+                                    <span style={{ color: "#FFD700" }}>{defendingCard.power}</span>
+                                    {")"}
+                                </div>
+                            </div>
+                        )}
 
-            {/* Duel Status */}
-            <div style={{
-                background: "rgba(0, 0, 0, 0.3)",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                padding: "12px",
-                textAlign: "center"
-            }}>
-                <div style={{ fontSize: "12px", color: "#FFD700", marginBottom: "6px" }}>
-                    СТАТУС ДУЭЛИ
-                </div>
-                <div style={{ fontSize: "14px" }}>
-                    {!defendingCard && isUnderAttack ? (
-                        <span style={{ color: "#DC143C" }}>
-                            🚨 Выберите карту для защиты!
-                        </span>
-                    ) : defendingCard ? (
-                        <span style={{ color: "#4169E1" }}>
-                            🛡️ Защита активна
-                        </span>
-                    ) : (
-                        <span style={{ color: "#FFD700" }}>
-                            ⚔️ Дуэль в процессе
-                        </span>
+                        {attackTarget && (
+                            <div style={{
+                                background: "rgba(0, 0, 0, 0.4)",
+                                border: "1px solid #FFD700",
+                                borderRadius: "6px",
+                                padding: "8px",
+                                marginTop: "8px"
+                            }}>
+                                <div style={{ fontSize: "11px", color: "#FFD700", marginBottom: "4px" }}>
+                                    🎯 Цель атаки:
+                                </div>
+                                <div style={{ fontSize: "12px", color: "#FFD700" }}>
+                                    {players[attackTarget]?.name || attackTarget}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Duel Result */}
+                    {attackingCard && defendingCard && (
+                        <div style={{
+                            background: "rgba(0, 0, 0, 0.4)",
+                            border: "1px solid #FFD700",
+                            borderRadius: "6px",
+                            padding: "8px",
+                            margin: "0 12px 12px 12px",
+                            textAlign: "center"
+                        }}>
+                            <div style={{ fontSize: "11px", color: "#FFD700", marginBottom: "4px" }}>
+                                🎯 РЕЗУЛЬТАТ ДУЭЛИ
+                            </div>
+                            <div style={{ fontSize: "12px" }}>
+                                {defendingCard.power >= attackingCard.power ? (
+                                    <span style={{ color: "#10B981" }}>
+                                        🛡️ Защита успешна! (Сила {defendingCard.power} ≥ {attackingCard.power})
+                                    </span>
+                                ) : (
+                                    <span style={{ color: "#DC143C" }}>
+                                        🗡️ Атака пробила защиту! (Сила {attackingCard.power} &gt; {defendingCard.power})
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     )}
-                </div>
-            </div>
-
-            {/* Duel Result */}
-            {attackingCard && defendingCard && (
-                <div style={{
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "2px solid #FFD700",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    textAlign: "center",
-                    marginTop: "12px"
-                }}>
-                    <div style={{ fontSize: "14px", color: "#FFD700", marginBottom: "6px" }}>
-                        ⚔️ РЕЗУЛЬТАТ
-                    </div>
-                    <div style={{ fontSize: "12px", marginBottom: "6px" }}>
-                        Атака: <span style={{ color: "#DC143C" }}>{attackingCard.power}</span>
-                        {" vs "}
-                        Защита: <span style={{ color: "#4169E1" }}>{defendingCard.power}</span>
-                    </div>
-                    <div style={{ 
-                        fontSize: "16px", 
-                        fontWeight: "bold",
-                        color: attackingCard.power > defendingCard.power ? "#DC143C" : "#4169E1"
-                    }}>
-                        {attackingCard.power > defendingCard.power 
-                            ? "🗡️ Атака пробила защиту!" 
-                            : "🛡️ Защита успешна!"}
-                    </div>
-                </div>
+                </>
             )}
         </div>
     );

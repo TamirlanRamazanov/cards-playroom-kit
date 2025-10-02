@@ -4,9 +4,10 @@ import LoadingScreen from './LoadingScreen';
 interface MainMenuProps {
     onStartGame: () => void;
     onDebugGame: () => void;
+    onDebugGameV2: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGameV2 }) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -179,7 +180,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
                 {/* Примеры других кнопок - раскомментируйте и настройте по необходимости */}
                 
                 <button
-                    onClick={() => console.log("Settings clicked")}
+                    onClick={onDebugGame}
                     style={{
                         position: "absolute",
                         top: "68.5%", // Настройте позицию
@@ -203,7 +204,35 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
                         paddingBottom: "3%",  
                     }}
                 >
-                    Settings
+                    Debug
+                </button>
+
+                <button
+                    onClick={onDebugGameV2}
+                    style={{
+                        position: "absolute",
+                        top: "75.25%", // Настройте позицию между Debug и Rules
+                        left: "50%", // Настройте позицию
+                        transform: "translate(-50%, -50%) rotate(4deg)",
+                        width: "75%", // 20% от ширины изображения
+                        height: "8%", // 8% от высоты изображения
+                        border: "none", //"2px solid purple", // Временно видимая граница
+                        background: "transparent", //"rgba(128, 0, 128, 0.3)", // Временно видимый фон
+                        cursor: "pointer",
+                        fontSize: "clamp(8px, 3vw, 64px)",
+                        fontWeight: "bold",
+                        color: "#8B0000",
+                        fontFamily: "Pirata One, cursive",
+                        textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+                        zIndex: 4,
+
+                        display: "flex",
+                        alignItems: "flex-end",      /* Позиционируем от низа */
+                        justifyContent: "center",    /* Горизонтальное центрирование */
+                        paddingBottom: "3%",  
+                    }}
+                >
+                    Debug V2
                 </button>
 
                 <button
@@ -235,7 +264,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
                 </button>
 
                 <button
-                    onClick={onDebugGame}
+                    onClick={() => console.log("Credits clicked")}
                     style={{
                         position: "absolute",
                         top: "95%", // Настройте позицию
@@ -259,7 +288,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame }) => {
                         paddingBottom: "3%",  
                     }}
                 >
-                    Debug
+                    Credits
                 </button>
                 
             </div>

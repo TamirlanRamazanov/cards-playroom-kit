@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GameState } from '../types';
 
 interface FactionSystemProps {
@@ -16,6 +16,7 @@ const FactionSystem: React.FC<FactionSystemProps> = ({
     onConfirmTarget,
     onCancelTarget
 }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const { 
         availableTargets, 
         factionBonuses, 
@@ -48,230 +49,260 @@ const FactionSystem: React.FC<FactionSystemProps> = ({
             backdropFilter: "blur(10px)",
             border: "2px solid #7C3AED",
             borderRadius: "12px",
-            padding: "16px",
             color: "#fff",
             zIndex: 300,
-            minWidth: "300px",
-            maxWidth: "400px"
+            minWidth: isCollapsed ? "60px" : "300px",
+            maxWidth: isCollapsed ? "60px" : "400px",
+            transition: "all 0.3s ease"
         }}>
-            {/* Faction System Header */}
+            {/* Header with Collapse Button */}
             <div style={{
-                textAlign: "center",
-                marginBottom: "16px",
-                paddingBottom: "12px",
-                borderBottom: "2px solid #7C3AED"
-            }}>
-                <h3 style={{ margin: 0, color: "#A78BFA", fontSize: "18px" }}>
-                    🏛️ СИСТЕМА ФРАКЦИЙ
-                </h3>
-                <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
-                    {targetSelectionMode ? "Выбор цели для атаки" : "Фракции карт"}
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                borderBottom: isCollapsed ? "none" : "2px solid #7C3AED",
+                cursor: "pointer"
+            }} onClick={() => setIsCollapsed(!isCollapsed)}>
+                <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "8px",
+                    opacity: isCollapsed ? 0 : 1,
+                    transition: "opacity 0.3s ease"
+                }}>
+                    <h3 style={{ margin: 0, color: "#A78BFA", fontSize: "16px" }}>
+                        🏛️ СИСТЕМА ФРАКЦИЙ
+                    </h3>
                 </div>
+                <button
+                    style={{
+                        background: "none",
+                        border: "none",
+                        color: "#A78BFA",
+                        fontSize: "18px",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        transition: "transform 0.3s ease"
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCollapsed(!isCollapsed);
+                    }}
+                >
+                    {isCollapsed ? "▶️" : "◀️"}
+                </button>
             </div>
 
-            {/* Current Card Factions */}
-            {currentFactions.length > 0 && (
-                <div style={{
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid #7C3AED",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    marginBottom: "16px",
-                    textAlign: "center"
-                }}>
-                    <div style={{ fontSize: "12px", color: "#A78BFA", marginBottom: "6px" }}>
-                        🎯 ТЕКУЩАЯ КАРТА
-                    </div>
-                    <div style={{ fontSize: "14px", marginBottom: "8px" }}>
-                        <span style={{ color: "#FFD700" }}>
-                            {currentCard?.name}
-                        </span>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-                        {currentFactions.map((factionId) => (
-                            <div
-                                key={factionId}
-                                style={{
-                                    background: "rgba(124, 58, 237, 0.2)",
-                                    border: "1px solid #7C3AED",
-                                    borderRadius: "6px",
-                                    padding: "6px 10px",
-                                    fontSize: "12px",
-                                    color: "#A78BFA",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                Фракция {factionId}
-                                {factionBonuses[factionId] && (
-                                    <span style={{ marginLeft: "4px", color: "#10B981" }}>
-                                        +{factionBonuses[factionId]}
-                                    </span>
-                                )}
+            {!isCollapsed && (
+                <>
+                    {/* Current Card Factions */}
+                    {currentFactions.length > 0 && (
+                        <div style={{
+                            background: "rgba(0, 0, 0, 0.3)",
+                            border: "1px solid #7C3AED",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            margin: "12px",
+                            textAlign: "center"
+                        }}>
+                            <div style={{ fontSize: "12px", color: "#A78BFA", marginBottom: "6px" }}>
+                                🎯 ТЕКУЩАЯ КАРТА
                             </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Target Selection */}
-            {targetSelectionMode && (
-                <div style={{
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid #DC143C",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    marginBottom: "16px"
-                }}>
-                    <div style={{ fontSize: "12px", color: "#DC143C", marginBottom: "8px", textAlign: "center" }}>
-                        🎯 ВЫБОР ЦЕЛИ ДЛЯ АТАКИ
-                    </div>
-                    
-                    {/* Available Targets */}
-                    <div style={{ marginBottom: "12px" }}>
-                        <div style={{ fontSize: "11px", color: "#FFD700", marginBottom: "6px" }}>
-                            Доступные цели:
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                            {availableTargets.map((targetId) => {
-                                const isSelected = selectedTarget === targetId;
-                                const isMe = targetId === myId;
-                                return (
-                                    <button
-                                        key={targetId}
-                                        onClick={() => onSelectTarget(targetId)}
+                            <div style={{ fontSize: "14px", marginBottom: "8px" }}>
+                                <span style={{ color: "#FFD700" }}>
+                                    {currentCard?.name}
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                                {currentFactions.map((factionId) => (
+                                    <div
+                                        key={factionId}
                                         style={{
-                                            background: isSelected ? "#DC143C" : "rgba(0, 0, 0, 0.4)",
-                                            border: isSelected ? "2px solid #FFD700" : "1px solid #334155",
+                                            background: "rgba(124, 58, 237, 0.2)",
+                                            border: "1px solid #7C3AED",
                                             borderRadius: "6px",
-                                            padding: "8px 12px",
+                                            padding: "6px 10px",
+                                            fontSize: "12px",
+                                            color: "#A78BFA",
+                                            fontWeight: "bold"
+                                        }}
+                                    >
+                                        Фракция {factionId}
+                                        {factionBonuses[factionId] && (
+                                            <span style={{ marginLeft: "4px", color: "#10B981" }}>
+                                                +{factionBonuses[factionId]}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Target Selection */}
+                    {targetSelectionMode && (
+                        <div style={{
+                            background: "rgba(0, 0, 0, 0.3)",
+                            border: "1px solid #DC143C",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            margin: "0 12px 12px 12px"
+                        }}>
+                            <div style={{ fontSize: "12px", color: "#DC143C", marginBottom: "8px", textAlign: "center" }}>
+                                🎯 ВЫБОР ЦЕЛИ ДЛЯ АТАКИ
+                            </div>
+                            
+                            {/* Available Targets */}
+                            <div style={{ marginBottom: "12px" }}>
+                                <div style={{ fontSize: "11px", color: "#FFD700", marginBottom: "6px" }}>
+                                    Доступные цели:
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                    {availableTargets.map((targetId) => {
+                                        const isSelected = selectedTarget === targetId;
+                                        const isMe = targetId === myId;
+                                        return (
+                                            <button
+                                                key={targetId}
+                                                onClick={() => onSelectTarget(targetId)}
+                                                style={{
+                                                    background: isSelected ? "#DC143C" : "rgba(0, 0, 0, 0.4)",
+                                                    border: isSelected ? "2px solid #FFD700" : "1px solid #334155",
+                                                    borderRadius: "6px",
+                                                    padding: "8px 12px",
+                                                    color: "#fff",
+                                                    cursor: "pointer",
+                                                    fontSize: "12px",
+                                                    textAlign: "left",
+                                                    opacity: isMe ? 0.5 : 1
+                                                }}
+                                                disabled={isMe}
+                                            >
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                    <span style={{ color: isSelected ? "#FFD700" : "#fff" }}>
+                                                        {isSelected ? "🎯" : "👤"}
+                                                    </span>
+                                                    <span style={{ fontWeight: "bold" }}>
+                                                        {players[targetId]?.name || targetId}
+                                                    </span>
+                                                    {isMe && <span style={{ color: "#666" }}>(вы)</span>}
+                                                    {isSelected && <span style={{ color: "#FFD700" }}>• ВЫБРАНО</span>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Target Actions */}
+                            {selectedTarget && (
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                        onClick={onConfirmTarget}
+                                        style={{
+                                            flex: 1,
+                                            background: "#10B981",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            padding: "8px",
                                             color: "#fff",
                                             cursor: "pointer",
                                             fontSize: "12px",
-                                            textAlign: "left",
-                                            opacity: isMe ? 0.5 : 1
+                                            fontWeight: "bold"
                                         }}
-                                        disabled={isMe}
                                     >
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <span style={{ color: isSelected ? "#FFD700" : "#fff" }}>
-                                                {isSelected ? "🎯" : "👤"}
-                                            </span>
-                                            <span style={{ fontWeight: "bold" }}>
-                                                {players[targetId]?.name || targetId}
-                                            </span>
-                                            {isMe && <span style={{ color: "#666" }}>(вы)</span>}
-                                            {isSelected && <span style={{ color: "#FFD700" }}>• ВЫБРАНО</span>}
-                                        </div>
+                                        ✅ Подтвердить
                                     </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Target Actions */}
-                    {selectedTarget && (
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                                onClick={onConfirmTarget}
-                                style={{
-                                    flex: 1,
-                                    background: "#10B981",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    padding: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                ✅ Подтвердить
-                            </button>
-                            <button
-                                onClick={onCancelTarget}
-                                style={{
-                                    flex: 1,
-                                    background: "#6B7280",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    padding: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                ❌ Отмена
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Faction Effects */}
-            {currentFactions.length > 0 && (
-                <div style={{
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    marginBottom: "16px"
-                }}>
-                    <div style={{ fontSize: "12px", color: "#FFD700", marginBottom: "8px", textAlign: "center" }}>
-                        ⚡ ЭФФЕКТЫ ФРАКЦИЙ
-                    </div>
-                    <div style={{ fontSize: "11px", opacity: 0.8, lineHeight: "1.4" }}>
-                        {currentFactions.map((factionId) => {
-                            const effects = factionEffects[factionId] || [];
-                            return effects.length > 0 ? (
-                                <div key={factionId} style={{ marginBottom: "6px" }}>
-                                    <span style={{ color: "#A78BFA", fontWeight: "bold" }}>
-                                        Фракция {factionId}:
-                                    </span>
-                                    <ul style={{ margin: "4px 0", paddingLeft: "16px" }}>
-                                        {effects.map((effect, index) => (
-                                            <li key={index} style={{ marginBottom: "2px" }}>
-                                                {effect}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <button
+                                        onClick={onCancelTarget}
+                                        style={{
+                                            flex: 1,
+                                            background: "#6B7280",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            padding: "8px",
+                                            color: "#fff",
+                                            cursor: "pointer",
+                                            fontSize: "12px",
+                                            fontWeight: "bold"
+                                        }}
+                                    >
+                                        ❌ Отмена
+                                    </button>
                                 </div>
-                            ) : null;
-                        })}
-                        {currentFactions.every(f => !factionEffects[f]?.length) && (
-                            <div style={{ textAlign: "center", opacity: 0.6 }}>
-                                Нет специальных эффектов
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Faction Bonuses Info */}
-            <div style={{
-                background: "rgba(0, 0, 0, 0.3)",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                padding: "12px",
-                textAlign: "center"
-            }}>
-                <div style={{ fontSize: "12px", color: "#FFD700", marginBottom: "6px" }}>
-                    📊 БОНУСЫ ФРАКЦИЙ
-                </div>
-                <div style={{ fontSize: "11px", opacity: 0.8, lineHeight: "1.4" }}>
-                    {Object.entries(factionBonuses).length > 0 ? (
-                        Object.entries(factionBonuses).map(([factionId, bonus]) => (
-                            <div key={factionId} style={{ marginBottom: "4px" }}>
-                                <span style={{ color: "#A78BFA" }}>Фракция {factionId}</span>
-                                {" → "}
-                                <span style={{ color: "#10B981" }}>+{bonus} к силе</span>
-                            </div>
-                        ))
-                    ) : (
-                        <div>Бонусы фракций не настроены</div>
+                            )}
+                        </div>
                     )}
-                </div>
-            </div>
+
+                    {/* Faction Effects */}
+                    {currentFactions.length > 0 && (
+                        <div style={{
+                            background: "rgba(0, 0, 0, 0.3)",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            margin: "0 12px 12px 12px"
+                        }}>
+                            <div style={{ fontSize: "12px", color: "#FFD700", marginBottom: "8px", textAlign: "center" }}>
+                                ⚡ ЭФФЕКТЫ ФРАКЦИЙ
+                            </div>
+                            <div style={{ fontSize: "11px", opacity: 0.8, lineHeight: "1.4" }}>
+                                {currentFactions.map((factionId) => {
+                                    const effects = factionEffects[factionId] || [];
+                                    return effects.length > 0 ? (
+                                        <div key={factionId} style={{ marginBottom: "6px" }}>
+                                            <span style={{ color: "#A78BFA", fontWeight: "bold" }}>
+                                                Фракция {factionId}:
+                                            </span>
+                                            <ul style={{ margin: "4px 0", paddingLeft: "16px" }}>
+                                                {effects.map((effect, index) => (
+                                                    <li key={index} style={{ marginBottom: "2px" }}>
+                                                        {effect}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ) : null;
+                                })}
+                                {currentFactions.every(f => !factionEffects[f]?.length) && (
+                                    <div style={{ textAlign: "center", opacity: 0.6 }}>
+                                        Нет специальных эффектов
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Faction Bonuses Info */}
+                    <div style={{
+                        background: "rgba(0, 0, 0, 0.3)",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        margin: "0 12px 12px 12px",
+                        textAlign: "center"
+                    }}>
+                        <div style={{ fontSize: "12px", color: "#FFD700", marginBottom: "6px" }}>
+                            📊 БОНУСЫ ФРАКЦИЙ
+                        </div>
+                        <div style={{ fontSize: "11px", opacity: 0.8, lineHeight: "1.4" }}>
+                            {Object.entries(factionBonuses).length > 0 ? (
+                                Object.entries(factionBonuses).map(([factionId, bonus]) => (
+                                    <div key={factionId} style={{ marginBottom: "4px" }}>
+                                        <span style={{ color: "#A78BFA" }}>Фракция {factionId}</span>
+                                        {" → "}
+                                        <span style={{ color: "#10B981" }}>+{bonus} к силе</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div>Бонусы фракций не настроены</div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

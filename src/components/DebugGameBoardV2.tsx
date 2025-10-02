@@ -32,84 +32,86 @@ class SeededRandom {
 }
 
 // Базовая функция создания игрового состояния
-const createBasicGameState = (seed: number = 42, playerCount: number = 4): GameState => {
+const createBasicGameState = (seed: number = 42): GameState => {
     // Создаем генератор случайных чисел с seed
     const random = new SeededRandom(seed);
     
     // Создаем полную колоду из всех карт и перемешиваем её
     const shuffledDeck = random.shuffle([...CARDS_DATA]);
     
-    // Создаем игроков и раздаем карты в зависимости от количества
-    const players: Record<string, { name: string }> = {};
-    const hands: Record<string, Card[]> = {};
-    const turnOrder: string[] = [];
-    
-    for (let i = 1; i <= playerCount; i++) {
-        const playerId = `player-${i}`;
-        const playerCards = shuffledDeck.splice(0, 6);
-        
-        players[playerId] = { name: `Player ${i}` };
-        hands[playerId] = playerCards;
-        turnOrder.push(playerId);
-    }
+    // Раздаем карты 4 игрокам (по 6 карт каждому)
+    const player1Cards = shuffledDeck.splice(0, 6);
+    const player2Cards = shuffledDeck.splice(0, 6);
+    const player3Cards = shuffledDeck.splice(0, 6);
+    const player4Cards = shuffledDeck.splice(0, 6);
     
     // Оставшиеся карты остаются в колоде
     const remainingDeck = shuffledDeck;
     
     return {
-    phase: "playing",
+        phase: "playing",
         hostId: "player-1",
-        players,
-        hands,
-            slots: [null, null, null, null, null, null], // Пустой стол для атакующих карт
+        players: {
+            "player-1": { name: "Player 1" },
+            "player-2": { name: "Player 2" },
+            "player-3": { name: "Player 3" },
+            "player-4": { name: "Player 4" },
+        },
+        hands: {
+            "player-1": player1Cards,
+            "player-2": player2Cards,
+            "player-3": player3Cards,
+            "player-4": player4Cards
+        },
+        slots: [null, null, null, null, null, null], // Пустой стол для атакующих карт
         defenseSlots: [null, null, null, null, null, null], // Пустые слоты для защиты
-        playerCountAtStart: playerCount,
-    winnerId: undefined,
-    startedAt: Date.now(),
-    
-    // Turn system
+        playerCountAtStart: 3,
+        winnerId: undefined,
+        startedAt: Date.now(),
+        
+        // Turn system
         currentTurn: "player-1",
-        turnOrder,
-    currentTurnIndex: 0,
+        turnOrder: ["player-1", "player-2", "player-3", "player-4"],
+        currentTurnIndex: 0,
         turnPhase: "play",
-    
-    // Game mechanics
-    attackingCard: null,
-    defendingCard: null,
-    attackTarget: undefined,
-    canPass: true,
-    canTakeCards: true,
-    
-    // Card draw system
+        
+        // Game mechanics
+        attackingCard: null,
+        defendingCard: null,
+        attackTarget: undefined,
+        canPass: true,
+        canTakeCards: true,
+        
+        // Card draw system
         deck: remainingDeck,
-    discardPile: [],
-    maxHandSize: 6,
-    cardsDrawnThisTurn: {},
-    canDrawCards: true,
-    
-    // Faction system
-        availableTargets: turnOrder.slice(1), // Все игроки кроме первого
+        discardPile: [],
+        maxHandSize: 6,
+        cardsDrawnThisTurn: {},
+        canDrawCards: true,
+        
+        // Faction system
+        availableTargets: ["player-2", "player-3", "player-4"],
         factionBonuses: {},
-    targetSelectionMode: false,
-    selectedTarget: undefined,
+        targetSelectionMode: false,
+        selectedTarget: undefined,
         factionEffects: {},
         activeFactions: [],
-    
-            // Card power system
+        
+        // Card power system
         minCardPower: 50,
         maxCardPower: 100,
         canDefendWithEqualPower: true,
-    
-    // Turn control system
-    turnActions: {
-        canEndTurn: true,
-        canPass: true,
-        canTakeCards: true,
-        canAttack: true,
-        canDefend: false,
-    },
-    turnHistory: [
-        {
+        
+        // Turn control system
+        turnActions: {
+            canEndTurn: true,
+            canPass: true,
+            canTakeCards: true,
+            canAttack: true,
+            canDefend: false,
+        },
+        turnHistory: [
+            {
                 playerId: "player-1",
                 action: "Игра началась",
                 timestamp: Date.now(),
@@ -118,36 +120,16 @@ const createBasicGameState = (seed: number = 42, playerCount: number = 4): GameS
     };
 };
 
-interface DebugGameBoardProps {
+interface DebugGameBoardV2Props {
     onBack?: () => void;
 }
 
-const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
+const DebugGameBoardV2: React.FC<DebugGameBoardV2Props> = ({ onBack }) => {
     const [seed, setSeed] = useState<number>(42);
-    const [playerCount, setPlayerCount] = useState<number>(4);
-    const [gameState, setGameState] = useState<GameState>(createBasicGameState(seed, playerCount));
+    const [gameState, setGameState] = useState<GameState>(createBasicGameState(seed));
     const [currentPlayerId, setCurrentPlayerId] = useState<string>("player-1");
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
     const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
-    const [gameInitialized, setGameInitialized] = useState<boolean>(false);
-    const [showFirstPlayerModal, setShowFirstPlayerModal] = useState<boolean>(false);
-    const [firstPlayerInfo, setFirstPlayerInfo] = useState<{playerId: string, playerName: string, cardName: string, power: number} | null>(null);
-    const [playerRoles, setPlayerRoles] = useState<Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'>>({});
-    
-    // Система приоритета атаки
-    const [attackPriority, setAttackPriority] = useState<'attacker' | 'co-attacker'>('attacker'); // Кто имеет приоритет атаки
-    const [mainAttackerHasPlayed, setMainAttackerHasPlayed] = useState<boolean>(false); // Подкинул ли главный атакующий хотя бы одну карту
-    const [attackerPassed, setAttackerPassed] = useState<boolean>(false); // Отказался ли главный атакующий от подкидывания
-    const [coAttackerPassed, setCoAttackerPassed] = useState<boolean>(false); // Отказался ли со-атакующий от подкидывания
-    
-    // Состояния блокировки кнопок
-    const [attackerBitoPressed, setAttackerBitoPressed] = useState<boolean>(false); // Нажал ли главный атакующий Бито
-    const [coAttackerBitoPressed, setCoAttackerBitoPressed] = useState<boolean>(false); // Нажал ли со-атакующий Бито
-    const [attackerPasPressed, setAttackerPasPressed] = useState<boolean>(false); // Нажал ли главный атакующий Пас
-    const [coAttackerPasPressed, setCoAttackerPasPressed] = useState<boolean>(false); // Нажал ли со-атакующий Пас
-    
-    // Состояние для очереди добора карт
-    const [drawQueue, setDrawQueue] = useState<string[]>([]);
     
     // Простая проверка, что консоль работает
     console.log('🚀 DebugGameBoardV2 загружен!', { gameMode });
@@ -160,6 +142,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
     const [dropZoneTimeout, setDropZoneTimeout] = useState<number | null>(null); // Таймаут для задержки деактивации drop zone
     const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null); // Индекс невалидной карты защиты
     const [canTakeCards, setCanTakeCards] = useState<boolean>(false); // Можно ли взять карты
+    const [activeFactions, setActiveFactions] = useState<string[]>([]);
     
     // Счётчик фракций: {factionId: count}
     const [factionCounter, setFactionCounter] = useState<Record<number, number>>({}); // Активные фракции (названия)
@@ -369,7 +352,10 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
 
     // Функция для установки активных фракций из карты
     const setActiveFactionsFromCard = (card: Card) => {
+        const factionNames = getFactionNames(card.factions);
+        setActiveFactions(factionNames);
         setActiveFirstAttackFactions(card.factions); // Устанавливаем активные фракции первой карты
+        console.log(`🎯 Установлены активные фракции:`, factionNames);
         console.log(`🎯 Установлены активные фракции первой карты:`, card.factions);
     };
 
@@ -469,6 +455,16 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
             console.log(`🎯 Восстановлены фракции защиты из буфера:`, Object.keys(buffer).map(id => `${FACTIONS[parseInt(id)]}(${buffer[parseInt(id)]})`));
             
             // Обновляем активные фракции на основе нового счётчика
+            const newActiveFactions = Object.keys(newCounter)
+                .map(id => parseInt(id))
+                .filter(id => newCounter[id] > 0)
+                .map(id => {
+                    const factionEntry = Object.entries(FACTIONS).find(([_, name]) => name === FACTIONS[id]);
+                    return factionEntry ? FACTIONS[id] : `Unknown ${id}`;
+                });
+            
+            setActiveFactions(newActiveFactions);
+            
             return newCounter;
         });
     };
@@ -499,6 +495,9 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         // Пересечение с фракциями первой карты атаки
         const firstAttackFactions = getFirstAttackCardFactions();
         const intersection = getFactionIntersection(card.factions, firstAttackFactions);
+        const newActiveFactions = getFactionNames(intersection);
+        
+        setActiveFactions(newActiveFactions);
         
         // Обновляем активные фракции первой карты - только пересекающиеся
         setActiveFirstAttackFactions(intersection);
@@ -518,7 +517,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         // Восстанавливаем фракции защиты из буфера
         restoreDefenseFactionsFromBuffer(defenseBuffer);
         
-        console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
+        console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты:`, newActiveFactions);
     };
 
     // Функция для обновления активных фракций после добавления карты защиты
@@ -532,6 +531,10 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
 
         // Все фракции карты защиты становятся активными
         const factionNames = getFactionNames(card.factions);
+        setActiveFactions(prev => {
+            const newFactions = [...new Set([...prev, ...factionNames])];
+            return newFactions;
+        });
         
         // Обновляем счётчик
         updateFactionCounter(card.factions, 1);
@@ -681,6 +684,8 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     return factionEntry ? FACTIONS[id] : `Unknown ${id}`;
                 });
             
+            setActiveFactions(allActiveFactions);
+            
             console.log(`🎯 Атакующая карта прикреплена через защитную. Пересечение:`, intersectionNames);
             console.log(`🎯 Фракции первой карты атаки:`, firstAttackFactionNames);
             console.log(`🎯 Итоговые активные фракции:`, allActiveFactions);
@@ -702,7 +707,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
 
     const myId = currentPlayerId;
     const myHand = gameState.hands[myId] || [];
-
+    
     // useEffect для синхронизации размера div защиты с div атаки
     useEffect(() => {
         syncDefenseZoneSize();
@@ -741,412 +746,19 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
 
     // Функция для переключения на другого игрока
     const switchToPlayer = (playerId: string) => {
-        // Если игра инициализирована, проверяем роль игрока
-        if (gameInitialized) {
-            const playerRole = playerRoles[playerId];
-            if (playerRole === 'observer') {
-                console.log('❌ Наблюдающие игроки не могут быть активными');
-                return;
-            }
-            
-            // Автоматически переключаем режим в зависимости от роли
-            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
-                setGameMode('attack');
-            } else if (playerRole === 'defender') {
-                setGameMode('defense');
-            }
-        }
-        
         setCurrentPlayerId(playerId);
-    };
-    
-    // Функция для завершения игры и возврата в исходное состояние
-    const endGame = () => {
-        setGameInitialized(false);
-        setPlayerRoles({});
-        setCurrentPlayerId('player-1');
-        setGameMode('attack');
-        setShowFirstPlayerModal(false);
-        setFirstPlayerInfo(null);
-        // Сбрасываем состояния приоритета атаки
-        setAttackPriority('attacker');
-        setMainAttackerHasPlayed(false);
-        setAttackerPassed(false);
-        setCoAttackerPassed(false);
-        
-        // Сбрасываем состояния блокировки кнопок
-        setAttackerBitoPressed(false);
-        setCoAttackerBitoPressed(false);
-        setAttackerPasPressed(false);
-        setCoAttackerPasPressed(false);
-    };
-    
-    // Функции для работы с приоритетом атаки
-    const getCurrentPlayerRole = (): 'attacker' | 'co-attacker' | 'defender' | 'observer' | null => {
-        return playerRoles[currentPlayerId] || null;
-    };
-    
-    const canPlayerAttack = (): boolean => {
-        const role = getCurrentPlayerRole();
-        if (!role || role === 'observer' || role === 'defender') return false;
-        
-        // Если главный атакующий еще не подкинул карты, только он может атаковать
-        if (!mainAttackerHasPlayed) {
-            return role === 'attacker';
-        }
-        
-        // После того как главный атакующий подкинул карты, приоритет определяется текущим состоянием
-        return role === attackPriority;
-    };
-    
-    // Функция для проверки, есть ли неотбитые карты на столе
-    const hasUnbeatenCards = (): boolean => {
-        const attackCards = gameState.slots || [];
-        const hasUnbeaten = attackCards.some((attackCard, index) => {
-            if (!attackCard) return false;
-            const defenseCard = defenseCards[index];
-            return defenseCard === null; // Карта атаки не отбита, если нет карты защиты
-        });
-        
-        console.log('🔍 Проверка неотбитых карт:', {
-            attackCards: attackCards.filter(card => card !== null).length,
-            defenseCards: defenseCards.filter(card => card !== null).length,
-            hasUnbeaten,
-            attackCardsDetails: attackCards.map((card, index) => ({
-                index,
-                attackCard: card?.name || 'null',
-                defenseCard: defenseCards[index]?.name || 'null'
-            }))
-        });
-        
-        return hasUnbeaten;
-    };
-    
-    // Функция для проверки, нужно ли показывать кнопку Бито
-    const shouldShowBitoButton = (): boolean => {
-        // Не показываем Бито если один игрок уже нажал Пас
-        if (attackerPassed || coAttackerPassed) {
-            return false;
-        }
-        // Не показываем Бито для 2 игроков (только Пас)
-        if (playerCount === 2) {
-            return false;
-        }
-        return true;
-    };
-    
-    const handleBito = () => {
-        const role = getCurrentPlayerRole();
-        if (!role || (role !== 'attacker' && role !== 'co-attacker')) {
-            console.log('❌ Только атакующие игроки могут нажимать Бито');
-            return;
-        }
-        
-        if (!mainAttackerHasPlayed) {
-            console.log('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
-            return;
-        }
-        
-        // Проверяем, есть ли неотбитые карты на столе
-        const hasUnbeaten = hasUnbeatenCards();
-        console.log('🎯 Проверка Бито - есть ли неотбитые карты:', hasUnbeaten);
-        if (hasUnbeaten) {
-            console.log('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
-            alert('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
-            return;
-        }
-        
-        // Проверяем, не заблокирована ли кнопка
-        if (role === 'attacker' && attackerBitoPressed) {
-            console.log('❌ Кнопка Бито уже нажата главным атакующим');
-            return;
-        }
-        if (role === 'co-attacker' && coAttackerBitoPressed) {
-            console.log('❌ Кнопка Бито уже нажата со-атакующим');
-            return;
-        }
-        
-        
-        // Обычная логика передачи приоритета
-        const newPriority = attackPriority === 'attacker' ? 'co-attacker' : 'attacker';
-        setAttackPriority(newPriority);
-        
-        // Блокируем кнопку Бито для текущего игрока и разблокируем для другого
-        if (role === 'attacker') {
-            setAttackerBitoPressed(true);
-            setCoAttackerBitoPressed(false); // Разблокируем кнопку Бито со-атакующего
-        } else if (role === 'co-attacker') {
-            setCoAttackerBitoPressed(true);
-            setAttackerBitoPressed(false); // Разблокируем кнопку Бито главного атакующего
-        }
-        
-        console.log(`🎯 Приоритет атаки передан от ${role} к ${newPriority}`);
-    };
-    
-    const handlePas = () => {
-        const role = getCurrentPlayerRole();
-        if (!role || (role !== 'attacker' && role !== 'co-attacker')) {
-            console.log('❌ Только атакующие игроки могут нажимать Пас');
-            return;
-        }
-        
-        if (!mainAttackerHasPlayed) {
-            console.log('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
-            return;
-        }
-        
-        // Проверяем, есть ли неотбитые карты на столе
-        const hasUnbeaten = hasUnbeatenCards();
-        console.log('🎯 Проверка Пас - есть ли неотбитые карты:', hasUnbeaten);
-        if (hasUnbeaten) {
-            console.log('❌ Нельзя нажимать Пас пока есть неотбитые карты на столе');
-            alert('❌ Нельзя нажимать Пас пока есть неотбитые карты на столе');
-            return;
-        }
-        
-        // Проверяем, не заблокирована ли кнопка
-        if (role === 'attacker' && attackerPasPressed) {
-            console.log('❌ Кнопка Пас уже нажата главным атакующим');
-            return;
-        }
-        if (role === 'co-attacker' && coAttackerPasPressed) {
-            console.log('❌ Кнопка Пас уже нажата со-атакующим');
-            return;
-        }
-        
-        if (role === 'attacker') {
-            console.log('🎯 Главный атакующий нажал Пас');
-            setAttackerPassed(true);
-            setAttackerPasPressed(true); // Блокируем кнопку Пас навсегда
-            
-            // Для 2 игроков сразу завершаем ход
-            if (playerCount === 2) {
-                console.log('🎯 2 игрока: атакующий отказался - завершаем ход');
-                endTurn();
-                return;
-            }
-            
-            setAttackPriority('co-attacker'); // Передаем приоритет со-атакующему
-            console.log('🎯 Главный атакующий отказался от подкидывания, приоритет передан со-атакующему');
-            
-            // Проверяем завершение хода с обновленным состоянием
-            setTimeout(() => {
-                checkTurnEnd(true, coAttackerPassed);
-            }, 0);
-        } else if (role === 'co-attacker') {
-            console.log('🎯 Со-атакующий нажал Пас');
-            setCoAttackerPassed(true);
-            setCoAttackerPasPressed(true); // Блокируем кнопку Пас навсегда
-            setAttackPriority('attacker'); // Передаем приоритет главному атакующему
-            console.log('🎯 Со-атакующий отказался от подкидывания, приоритет передан главному атакующему');
-            
-            // Проверяем завершение хода с обновленным состоянием
-            setTimeout(() => {
-                checkTurnEnd(attackerPassed, true);
-            }, 0);
-        }
-    };
-    
-    const checkTurnEnd = (forceAttackerPassed?: boolean, forceCoAttackerPassed?: boolean) => {
-        const currentAttackerPassed = forceAttackerPassed !== undefined ? forceAttackerPassed : attackerPassed;
-        const currentCoAttackerPassed = forceCoAttackerPassed !== undefined ? forceCoAttackerPassed : coAttackerPassed;
-        
-        console.log('🔍 Проверка завершения хода:', {
-            attackerPassed: currentAttackerPassed,
-            coAttackerPassed: currentCoAttackerPassed,
-            bothPassed: currentAttackerPassed && currentCoAttackerPassed,
-            playerCount,
-            forceValues: forceAttackerPassed !== undefined || forceCoAttackerPassed !== undefined
-        });
-        
-        // Если оба игрока отказались от подкидывания, завершаем ход
-        if (currentAttackerPassed && currentCoAttackerPassed) {
-            console.log('🎯 Оба атакующих игрока отказались от подкидывания, завершаем ход');
-            endTurn();
-        }
-    };
-    
-    const endTurn = () => {
-        console.log('🎯 endTurn() вызвана!');
-        
-        // Перемещаем все карты со стола в стопку сброса
-        const attackCards = gameState.slots?.filter(card => card !== null) || [];
-        const defenseCardsOnTable = defenseCards.filter(card => card !== null);
-        const allCardsToDiscard = [...attackCards, ...defenseCardsOnTable];
-        
-        console.log('🎯 Карты для сброса:', {
-            attackCards: attackCards.length,
-            defenseCards: defenseCardsOnTable.length,
-            total: allCardsToDiscard.length,
-            attackCardNames: attackCards.map(card => card.name),
-            defenseCardNames: defenseCardsOnTable.map(card => card.name)
-        });
-        
-        setGameState(prev => ({
-            ...prev,
-            slots: [null, null, null, null, null, null],
-            discardPile: [...prev.discardPile, ...allCardsToDiscard]
-        }));
-        
-        // Очищаем карты защиты
-        setDefenseCards([null, null, null, null, null, null]);
-        
-        // Сбрасываем состояния приоритета атаки
-        setAttackPriority('attacker');
-        setMainAttackerHasPlayed(false);
-        setAttackerPassed(false);
-        setCoAttackerPassed(false);
-        
-        // Сбрасываем состояния блокировки кнопок
-        setAttackerBitoPressed(false);
-        setCoAttackerBitoPressed(false);
-        setAttackerPasPressed(false);
-        setCoAttackerPasPressed(false);
-        
-        console.log(`🎯 Ход завершен, ${allCardsToDiscard.length} карт перемещено в стопку сброса`);
-        
-        // Меняем роли после успешной защиты (сброс карт)
-        rotateRolesAfterSuccessfulDefense();
-        
-        // Обрабатываем очередь добора карт
-        setTimeout(() => {
-            processDrawQueue();
-        }, 100);
-        
-        // Проверяем окончание игры ПОСЛЕ действия конца хода (сброс карт)
-        setTimeout(() => {
-            const gameEnded = checkGameEnd();
-            if (gameEnded) {
-                console.log('🎮 Игра окончена после сброса карт');
-            }
-        }, 200);
     };
 
     // Функция для изменения seed и пересоздания игры
     const changeSeed = (newSeed: number) => {
         setSeed(newSeed);
-        setGameState(createBasicGameState(newSeed, playerCount));
+        setGameState(createBasicGameState(newSeed));
         setCurrentPlayerId("player-1");
-    };
-
-    // Функция для изменения количества игроков и пересоздания игры
-    const changePlayerCount = (newPlayerCount: number) => {
-        setPlayerCount(newPlayerCount);
-        setGameState(createBasicGameState(seed, newPlayerCount));
-        setCurrentPlayerId("player-1");
-        setGameInitialized(false); // Сбрасываем инициализацию при изменении количества игроков
-        setPlayerRoles({});
-    };
-
-    // Функция для определения первого игрока по самой слабой карте
-    const determineFirstPlayer = (): {playerId: string, playerName: string, cardName: string, power: number} => {
-        const players = gameState.players;
-        const hands = gameState.hands;
-        
-        let weakestPlayer = {playerId: "", playerName: "", cardName: "", power: 999};
-        
-        // Проходим по всем игрокам и находим самую слабую карту
-        Object.keys(players).forEach(playerId => {
-            const playerHand = hands[playerId] || [];
-            if (playerHand.length === 0) return;
-            
-            // Находим самую слабую карту у игрока
-            const weakestCard = playerHand.reduce((weakest, card) => 
-                card.power < weakest.power ? card : weakest, playerHand[0]);
-            
-            // Если эта карта слабее текущей самой слабой
-            if (weakestCard.power < weakestPlayer.power) {
-                weakestPlayer = {
-                    playerId,
-                    playerName: players[playerId]?.name || playerId,
-                    cardName: weakestCard.name,
-                    power: weakestCard.power
-                };
-            }
-        });
-        
-        return weakestPlayer;
-    };
-
-    // Функция для назначения ролей игрокам
-    const assignPlayerRoles = (firstPlayerId: string) => {
-        const turnOrder = gameState.turnOrder || [];
-        const roles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-        
-        const firstPlayerIndex = turnOrder.indexOf(firstPlayerId);
-        
-        // Назначаем роли по кругу от первого игрока
-        turnOrder.forEach((playerId, index) => {
-            const relativeIndex = (index - firstPlayerIndex + turnOrder.length) % turnOrder.length;
-            
-            if (relativeIndex === 0) {
-                roles[playerId] = 'attacker'; // Главный атакующий
-            } else if (relativeIndex === 1) {
-                roles[playerId] = 'defender'; // Защищающийся
-            } else if (relativeIndex === 2 && playerCount >= 3) {
-                roles[playerId] = 'co-attacker'; // Со-атакующий
-            } else {
-                roles[playerId] = 'observer'; // Наблюдающий
-            }
-        });
-        
-        setPlayerRoles(roles);
-    };
-
-    // Функция для инициализации игры
-    const initializeGame = () => {
-        const firstPlayer = determineFirstPlayer();
-        
-        // Обновляем текущего игрока
-        setCurrentPlayerId(firstPlayer.playerId);
-        
-        // Назначаем роли
-        assignPlayerRoles(firstPlayer.playerId);
-        
-        // Автоматически включаем режимы в зависимости от ролей
-        const firstPlayerRole = playerRoles[firstPlayer.playerId];
-        if (firstPlayerRole === 'attacker' || firstPlayerRole === 'co-attacker') {
-            setGameMode('attack');
-        } else if (firstPlayerRole === 'defender') {
-            setGameMode('defense');
-        }
-        
-        // Показываем модальное окно с информацией о первом игроке
-        setFirstPlayerInfo(firstPlayer);
-        setShowFirstPlayerModal(true);
-        
-        // Автоматически закрываем модальное окно через 6 секунд
-        setTimeout(() => {
-            setShowFirstPlayerModal(false);
-        }, 6000);
-        
-        // Отмечаем игру как инициализированную
-        setGameInitialized(true);
-        
-        console.log(`🎯 Первый игрок определен: ${firstPlayer.playerName} (${firstPlayer.cardName}, сила: ${firstPlayer.power})`);
-    };
-
-    // Функция для получения эмодзи роли
-    const getRoleEmoji = (role: 'attacker' | 'co-attacker' | 'defender' | 'observer'): string => {
-        switch (role) {
-            case 'attacker': return '⚔️⚔️'; // Два меча - главный атакующий
-            case 'co-attacker': return '⚔️'; // Один меч - со-атакующий
-            case 'defender': return '🛡️'; // Щит - защитник
-            case 'observer': return '👁️'; // Глаз - наблюдающий
-            default: return '';
-        }
     };
 
     // Drag & Drop функции
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
-        
-        // Проверяем роль текущего игрока - наблюдающие не могут взаимодействовать со столом
-        if (gameInitialized && playerRoles[currentPlayerId] === 'observer') {
-            console.log('❌ Наблюдающие игроки не могут перетаскивать карты');
-            return;
-        }
-        
         const cardData = active.data.current as { card: Card; index: number; source: string };
         console.log('🎯 handleDragStart:', { activeId: active.id, cardData, gameMode });
         if (cardData) {
@@ -1159,31 +771,6 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         const { active, over } = event;
         console.log('🎯 handleDragEnd ВЫЗВАН!', { activeId: active.id, overId: over?.id, gameMode });
         console.log('🔍 ТЕКУЩИЕ СОСТОЯНИЯ:', { hoveredAttackCard, activeCard: !!activeCard });
-        
-        // Проверяем роль текущего игрока - наблюдающие не могут взаимодействовать со столом
-        if (gameInitialized && playerRoles[currentPlayerId] === 'observer') {
-            console.log('❌ Наблюдающие игроки не могут взаимодействовать со столом');
-            setActiveCard(null);
-            setMousePosition(null);
-            setHoveredAttackCard(null);
-            setHoveredDefenseCard(null);
-            setActiveDropZone(null);
-            setInvalidDefenseCard(null);
-            return;
-        }
-        
-        // Проверяем приоритет атаки для атакующих игроков
-        if (gameInitialized && gameMode === 'attack' && !canPlayerAttack()) {
-            console.log('❌ Приоритет атаки не у вас');
-            alert('Приоритет атаки не у вас');
-            setActiveCard(null);
-            setMousePosition(null);
-            setHoveredAttackCard(null);
-            setHoveredDefenseCard(null);
-            setActiveDropZone(null);
-            setInvalidDefenseCard(null);
-            return;
-        }
         
         // Сбрасываем все ховеры при завершении перетаскивания
         setHoveredAttackCard(null);
@@ -1268,27 +855,18 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                 console.log('🎯 ДОБАВЛЯЕМ КАРТУ в слот', freeSlotIndex);
                 
                 setGameState((prev) => {
-                const myCards = [...(prev.hands[myId] || [])];
-                myCards.splice(index, 1);
-                
-                const slots = [...prev.slots];
+                    const myCards = [...(prev.hands[myId] || [])];
+                    myCards.splice(index, 1);
+                    
+                    const slots = [...prev.slots];
                     slots[freeSlotIndex] = card;
-                
-                return {
-                    ...prev,
-                    hands: { ...prev.hands, [myId]: myCards },
-                    slots,
-                };
-            });
-            
-            // Отмечаем, что главный атакующий подкинул карту
-            if (getCurrentPlayerRole() === 'attacker') {
-                setMainAttackerHasPlayed(true);
-                console.log('🎯 Главный атакующий подкинул карту, теперь со-атакующий может играть');
-            }
-            
-            // Добавляем игрока в очередь добора (атакующие игроки)
-            addToDrawQueue(myId, false);
+                    
+                    return {
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
+                });
                 
                 console.log('✅ КАРТА УСПЕШНО ДОБАВЛЕНА!');
             } else {
@@ -1331,23 +909,20 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                             } else {
                                 console.log(`⚠️ Карта "${card.name}" не найдена в руке по индексу ${index}. Карты в руке:`, myCards.map(c => c.name));
                             }
-                return {
-                    ...prev,
-                    hands: { ...prev.hands, [myId]: myCards },
-                };
-            });
-                        
-                        // Добавляем игрока в очередь добора (защитник)
-                        addToDrawQueue(myId, true);
+                            return {
+                                ...prev,
+                                hands: { ...prev.hands, [myId]: myCards },
+                            };
+                        });
                     } else {
                         console.log('⚠️ Карта защиты не была добавлена, карта остается в руке');
-        }
-
+                    }
+                    
                     // Карта защиты добавлена
                 } else {
                     alert('🛡️ Нет карт атаки для отбивания!');
                 }
-        setActiveCard(null);
+                setActiveCard(null);
                 setMousePosition(null);
                 return;
             }
@@ -1386,19 +961,13 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     
                     const slots = [...prev.slots];
                     slots[freeSlotIndex] = card;
-            
-            return {
-                ...prev,
+                    
+                    return {
+                        ...prev,
                         hands: { ...prev.hands, [myId]: myCards },
                         slots,
-            };
-        });
-        
-        // Отмечаем, что главный атакующий подкинул карту
-        if (getCurrentPlayerRole() === 'attacker') {
-            setMainAttackerHasPlayed(true);
-            console.log('🎯 Главный атакующий подкинул карту, теперь со-атакующий может играть');
-        }
+                    };
+                });
             } else {
                 alert('🃏 Стол полон! Максимум 6 карт.');
             }
@@ -1425,285 +994,12 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
 
     // Функция для сброса игры с текущим seed
     const resetGame = () => {
-        setGameState(createBasicGameState(seed, playerCount));
+        setGameState(createBasicGameState(seed));
         setCurrentPlayerId("player-1");
         resetTableStates(); // Используем централизованную функцию сброса состояний
     };
 
-    // Функции для управления очередью добора карт
-    const addToDrawQueue = (playerId: string, isDefender: boolean = false) => {
-        console.log(`🎯 Добавляем игрока ${playerId} в очередь добора (защитник: ${isDefender})`);
-        console.log(`🎯 Текущая очередь до добавления:`, drawQueue);
-        
-        setDrawQueue(prev => {
-            const newQueue = isDefender ? [...prev, playerId] : [playerId, ...prev];
-            console.log(`🎯 Новая очередь после добавления:`, newQueue);
-            return newQueue;
-        });
-    };
-    
-    const processDrawQueue = () => {
-        console.log('🎯 Обрабатываем очередь добора карт:', drawQueue);
-        console.log('🎯 Текущее состояние игры:', {
-            deckLength: gameState.deck.length,
-            hands: Object.keys(gameState.hands).map(id => ({ id, cards: gameState.hands[id]?.length || 0 }))
-        });
-        
-        if (drawQueue.length === 0) {
-            console.log('🎯 Очередь добора пуста');
-            return;
-        }
-        
-        // Создаем копию очереди для обработки
-        const queueToProcess = [...drawQueue];
-        
-        // Обрабатываем каждого игрока в очереди
-        queueToProcess.forEach(playerId => {
-            const playerHand = gameState.hands[playerId] || [];
-            const cardsNeeded = Math.min(6 - playerHand.length, gameState.deck.length);
-            
-            console.log(`🎯 Игрок ${playerId}: карт в руке ${playerHand.length}, нужно добрать ${cardsNeeded}`);
-            
-            if (cardsNeeded > 0 && gameState.deck.length > 0) {
-                const drawnCards = gameState.deck.slice(0, cardsNeeded);
-                const remainingDeck = gameState.deck.slice(cardsNeeded);
-                
-                console.log(`🎯 Добераем ${cardsNeeded} карт игроку ${playerId}:`, drawnCards.map(card => card.name));
-                
-                setGameState(prev => ({
-                ...prev,
-                    hands: {
-                        ...prev.hands,
-                        [playerId]: [...playerHand, ...drawnCards]
-                    },
-                    deck: remainingDeck
-                }));
-            } else {
-                console.log(`🎯 Игрок ${playerId} пропущен: карт достаточно или колода пуста`);
-            }
-        });
-        
-        // Очищаем очередь после обработки
-        setDrawQueue([]);
-        console.log('🎯 Очередь добора обработана и очищена');
-    };
-    
-    const clearDrawQueue = () => {
-        console.log('🎯 Очищаем очередь добора карт');
-        setDrawQueue([]);
-    };
-
-    // Функция для добора карт из колоды (ручной режим)
-    const handleDrawCards = () => {
-        console.log('🎯 Добор карт из колоды');
-        
-        if (gameState.deck.length === 0) {
-            console.log('❌ Колода пуста, нельзя добрать карты');
-            alert('❌ Колода пуста!');
-            return;
-        }
-        
-        // Добераем карты до 6 в руке
-        const myHand = gameState.hands[myId] || [];
-        const cardsToDraw = Math.min(6 - myHand.length, gameState.deck.length);
-        
-        if (cardsToDraw <= 0) {
-            console.log('❌ В руке уже 6 карт, добор не нужен');
-            alert('❌ В руке уже максимальное количество карт!');
-            return;
-        }
-        
-        const drawnCards = gameState.deck.slice(0, cardsToDraw);
-        const remainingDeck = gameState.deck.slice(cardsToDraw);
-        
-        console.log(`🎯 Добераем ${cardsToDraw} карт из колоды`);
-        console.log('🃏 Добранные карты:', drawnCards.map(card => card.name));
-        
-        setGameState(prev => ({
-            ...prev,
-            hands: {
-                ...prev.hands,
-                [myId]: [...myHand, ...drawnCards]
-            },
-            deck: remainingDeck
-        }));
-        
-        // Проверяем окончание игры после добора (только если колода стала пустой)
-        if (remainingDeck.length === 0) {
-            setTimeout(() => {
-                const gameEnded = checkGameEnd();
-                if (gameEnded) {
-                    console.log('🎮 Игра окончена после добора карт (колода опустошена)');
-                }
-            }, 100); // Небольшая задержка для обновления состояния
-        }
-        
-        alert(`✅ Добрано ${cardsToDraw} карт из колоды!`);
-    };
-
     // Функция для взятия карт
-    // Функция для проверки окончания игры
-    const checkGameEnd = () => {
-        console.log('🔍 Проверка окончания игры');
-        console.log('🎯 Колода пуста:', gameState.deck.length === 0);
-        
-        // Получаем количество карт у каждого игрока
-        const playerCardCounts = Object.keys(gameState.hands).map(playerId => ({
-            playerId,
-            cardCount: gameState.hands[playerId]?.length || 0
-        }));
-        
-        // Проверяем, есть ли игроки с 0 карт в руке
-        const playersWithZeroCards = playerCardCounts.filter(p => p.cardCount === 0);
-        const playersWithCards = playerCardCounts.filter(p => p.cardCount > 0);
-        
-        console.log('🎯 Игроки с 0 карт:', playersWithZeroCards);
-        console.log('🎯 Игроки с картами:', playersWithCards);
-        
-        // Игра заканчивается только если:
-        // 1. Колода пуста И
-        // 2. У всех игроков кроме одного 0 карт (т.е. остался только один игрок с картами)
-        if (gameState.deck.length === 0 && playersWithCards.length === 1) {
-            const loser = playersWithCards[0];
-            const winnerNames = playersWithZeroCards.map(p => `Игрок ${p.playerId.replace('player-', '')}`).join(', ');
-            
-            console.log('🎯 Проигравший (последний с картами):', loser);
-            console.log('🎯 Победители (без карт):', playersWithZeroCards);
-            
-            alert(`🎮 ИГРА ОКОНЧЕНА! 🎮\n\n🏆 Победители: ${winnerNames}\n💀 Проиграл: Игрок ${loser.playerId.replace('player-', '')} (${loser.cardCount} карт)\n\nПоздравляем победителей!`);
-            
-            return true; // Игра окончена
-        }
-        
-        // Если колода пуста, но еще есть несколько игроков с картами - игра продолжается
-        if (gameState.deck.length === 0 && playersWithCards.length > 1) {
-            console.log('🎯 Колода пуста, но игра продолжается - еще есть игроки с картами');
-        }
-        
-        return false; // Игра продолжается
-    };
-
-    // Функция для смены ролей после успешного сброса карт (оба атакующих пасуют)
-    const rotateRolesAfterSuccessfulDefense = () => {
-        console.log('🔄 Смена ролей после успешной защиты (сброс карт)');
-        console.log('🎯 Текущие роли:', playerRoles);
-        console.log('🎯 Количество игроков:', playerCount);
-        
-        const newRoles = { ...playerRoles };
-        
-        if (playerCount === 2) {
-            // Для 2 игроков: защитник → главный атакующий, атакующий → защитник
-            const currentAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'attacker');
-            const currentDefender = Object.keys(playerRoles).find(id => playerRoles[id] === 'defender');
-            
-            if (currentAttacker && currentDefender) {
-                newRoles[currentDefender] = 'attacker';     // защитник → главный атакующий
-                newRoles[currentAttacker] = 'defender';     // атакующий → защитник
-                console.log('🎯 2 игрока: роли поменялись местами');
-            }
-        } else if (playerCount === 3) {
-            // Для 3 игроков: защитник → главный атакующий, главный атакующий → защитник, со-атакующий → со-атакующий
-            const currentAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(playerRoles).find(id => playerRoles[id] === 'defender');
-            
-            if (currentAttacker && currentCoAttacker && currentDefender) {
-                newRoles[currentDefender] = 'attacker';     // защитник → главный атакующий
-                newRoles[currentAttacker] = 'defender';     // главный атакующий → защитник
-                newRoles[currentCoAttacker] = 'co-attacker'; // со-атакующий остается со-атакующим
-                console.log('🎯 3 игрока: роли сдвинуты на 1 вперед');
-            }
-        } else {
-            // Для 4+ игроков: защитник → главный атакующий, со-атакующий → защитник, следующий от со-атакующего → со-атакующий
-            const currentAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(playerRoles).find(id => playerRoles[id] === 'defender');
-            
-            if (currentAttacker && currentCoAttacker && currentDefender) {
-                // Находим следующих игроков по кругу
-                const allPlayerIds = Object.keys(playerRoles);
-                const coAttackerIndex = allPlayerIds.indexOf(currentCoAttacker);
-                
-                // Следующий от со-атакующего становится новым со-атакующим
-                const nextAfterCoAttacker = allPlayerIds[(coAttackerIndex + 1) % allPlayerIds.length];
-                
-                newRoles[currentDefender] = 'attacker';           // защитник → главный атакующий
-                newRoles[currentCoAttacker] = 'defender';         // со-атакующий → защитник
-                newRoles[nextAfterCoAttacker] = 'co-attacker';    // следующий от со-атакующего → со-атакующий
-                
-                // Остальные становятся наблюдателями
-                allPlayerIds.forEach(id => {
-                    if (![currentDefender, currentCoAttacker, nextAfterCoAttacker].includes(id)) {
-                        newRoles[id] = 'observer';
-                    }
-                });
-                
-                console.log('🎯 4+ игроков: роли сдвинуты на 1 вперед');
-            }
-        }
-        
-        setPlayerRoles(newRoles);
-        console.log('🎯 Новые роли после успешной защиты:', newRoles);
-    };
-
-    // Функция для смены ролей после взятия карт защитником
-    const rotateRolesAfterTakeCards = () => {
-        console.log('🔄 Смена ролей после взятия карт защитником');
-        console.log('🎯 Текущие роли:', playerRoles);
-        console.log('🎯 Количество игроков:', playerCount);
-        
-        const newRoles = { ...playerRoles };
-        
-        if (playerCount === 2) {
-            // Для 2 игроков роли не меняются
-            console.log('🎯 2 игрока: роли не меняются');
-        } else if (playerCount === 3) {
-            // Для 3 игроков: со-атакующий → главный атакующий, главный → защитник, защитник → со-атакующий
-            const currentAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(playerRoles).find(id => playerRoles[id] === 'defender');
-            
-            if (currentAttacker && currentCoAttacker && currentDefender) {
-                newRoles[currentCoAttacker] = 'attacker';      // со-атакующий → главный атакующий
-                newRoles[currentAttacker] = 'defender';        // главный атакующий → защитник
-                newRoles[currentDefender] = 'co-attacker';     // защитник → со-атакующий
-                console.log('🎯 3 игрока: роли сдвинуты на 1 назад');
-            }
-        } else {
-            // Для 4+ игроков: со-атакующий → главный атакующий, следующий → защитник, следующий → со-атакующий
-            const currentAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(playerRoles).find(id => playerRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(playerRoles).find(id => playerRoles[id] === 'defender');
-            
-            if (currentAttacker && currentCoAttacker && currentDefender) {
-                // Находим следующих игроков по кругу
-                const allPlayerIds = Object.keys(playerRoles);
-                const coAttackerIndex = allPlayerIds.indexOf(currentCoAttacker);
-                
-                // Следующий от со-атакующего становится защитником
-                const nextAfterCoAttacker = allPlayerIds[(coAttackerIndex + 1) % allPlayerIds.length];
-                // Следующий от нового защитника становится со-атакующим
-                const nextAfterNewDefender = allPlayerIds[(allPlayerIds.indexOf(nextAfterCoAttacker) + 1) % allPlayerIds.length];
-                
-                newRoles[currentCoAttacker] = 'attacker';           // со-атакующий → главный атакующий
-                newRoles[nextAfterCoAttacker] = 'defender';         // следующий от со-атакующего → защитник
-                newRoles[nextAfterNewDefender] = 'co-attacker';     // следующий от нового защитника → со-атакующий
-                
-                // Остальные становятся наблюдателями
-                allPlayerIds.forEach(id => {
-                    if (![currentCoAttacker, nextAfterCoAttacker, nextAfterNewDefender].includes(id)) {
-                        newRoles[id] = 'observer';
-                    }
-                });
-                
-                console.log('🎯 4+ игроков: роли сдвинуты на 2 вперед');
-            }
-        }
-        
-        setPlayerRoles(newRoles);
-        console.log('🎯 Новые роли:', newRoles);
-    };
-
     const handleTakeCards = () => {
         if (!canTakeCards) {
             console.log('❌ Нельзя взять карты: условия не выполнены');
@@ -1750,26 +1046,15 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         // Сбрасываем все состояния стола для нового хода
         resetTableStates();
         
-        // Меняем роли после взятия карт
-        rotateRolesAfterTakeCards();
-        
-        // Обрабатываем очередь добора карт
-        setTimeout(() => {
-            processDrawQueue();
-        }, 100);
-        
         console.log('✅ Все карты со стола перенесены в руку, стол очищен');
         alert(`✅ Взято ${allTableCards.length} карт со стола!`);
-        
-        // Проверяем окончание игры ПОСЛЕ действия конца хода
-        setTimeout(() => {
-            const gameEnded = checkGameEnd();
-            if (gameEnded) {
-                console.log('🎮 Игра окончена после взятия карт');
-            }
-        }, 200);
     };
 
+    // Функция для "Бито" (заготовка)
+    const handleBito = () => {
+        console.log('🎯 Бито - функционал будет реализован позже');
+        alert('🎯 Бито - функционал будет реализован позже');
+    };
 
     // Функция для полного сброса состояний (для будущей системы ходов)
     const resetTableStates = () => {
@@ -1783,24 +1068,12 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
         setActiveDropZone(null);
         setInvalidDefenseCard(null);
         setCanTakeCards(false);
+        setActiveFactions([]); // Сбрасываем активные фракции
         setFactionCounter({}); // Сбрасываем счётчик фракций
         setDefenseFactionsBuffer({}); // Сбрасываем буфер фракций защиты
         setActiveFirstAttackFactions([]); // Сбрасываем активные фракции первой карты
         setUsedDefenseCardFactions({}); // Сбрасываем использованные фракции карт защиты
         console.log('🎯 Буфер фракций защиты сброшен:', defenseFactionsBuffer);
-        
-        // Сбрасываем состояния приоритета атаки
-        setAttackPriority('attacker');
-        setMainAttackerHasPlayed(false);
-        setAttackerPassed(false);
-        setCoAttackerPassed(false);
-        setAttackerBitoPressed(false);
-        setCoAttackerBitoPressed(false);
-        setAttackerPasPressed(false);
-        setCoAttackerPasPressed(false);
-        
-        // Очищаем очередь добора карт
-        clearDrawQueue();
         
         // Очищаем карты защиты (стол уже очищен в handleTakeCards)
         setDefenseCards([]);
@@ -1915,236 +1188,97 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     alignItems: "center"
                 }}>
                     <div>
-                        <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Debug Game Board V1 (New Turn System)</h2>
+                        <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Debug Game Board V2</h2>
                         <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length} | Сброс: {gameState.discardPile?.length || 0} | Очередь добора: {drawQueue.length}
+                            Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length}
                         </div>
-                        </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        {!gameInitialized ? (
-                            <button 
-                                onClick={initializeGame}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#10b981",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                🚀 Начать игру
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={endGame}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#dc2626",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "12px",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                🏁 Завершить игру
-                            </button>
-                        )}
-                        
-                        {/* Выбор количества игроков - скрыт после инициализации */}
-                        {!gameInitialized && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Игроки:</span>
-                                <select
-                                    value={playerCount}
-                                    onChange={(e) => changePlayerCount(parseInt(e.target.value))}
-                                    style={{
-                                        padding: "4px 8px",
-                                        background: "#374151",
-                                        border: "1px solid #4B5563",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                        fontSize: "12px"
-                                    }}
-                                >
-                                    <option value={2}>2 игрока</option>
-                                    <option value={3}>3 игрока</option>
-                                    <option value={4}>4 игрока</option>
-                                    <option value={5}>5 игроков</option>
-                                    <option value={6}>6 игроков</option>
-                                </select>
-                        </div>
-                        )}
-                        
-                        {/* Ключ колоды - скрыт после инициализации */}
-                        {!gameInitialized && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Seed:</span>
-                                <input
-                                    type="number"
-                                    value={seed}
-                                    onChange={(e) => changeSeed(parseInt(e.target.value) || 42)}
-                                    style={{
-                                        width: "80px",
-                                        padding: "4px 8px",
-                                        background: "#374151",
-                                        border: "1px solid #4B5563",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                        fontSize: "12px"
-                                    }}
-                                />
                     </div>
-                        )}
-                        
-                        {/* Переключатель режимов атака/защита - отключен после инициализации */}
-                        {!gameInitialized && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <button 
-                                    onClick={() => setGameMode('attack')}
-                                    style={{
-                                        padding: "6px 12px",
-                                        background: gameMode === 'attack' ? "#dc2626" : "#374151",
-                                        border: "none",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                        cursor: "pointer",
-                                        fontSize: "11px",
-                                        fontWeight: gameMode === 'attack' ? "bold" : "normal"
-                                    }}
-                                >
-                                    ⚔️ Атака
-                                </button>
-                                <button
-                                    onClick={() => setGameMode('defense')}
-                                    style={{
-                                        padding: "6px 12px",
-                                        background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
-                                        border: "none",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                        cursor: "pointer",
-                                        fontSize: "11px",
-                                        fontWeight: gameMode === 'defense' ? "bold" : "normal"
-                                    }}
-                                >
-                                    🛡️ Защита
-                                </button>
-                            </div>
-                        )}
-                        
-                        {/* Кнопки действий - разные для разных ролей */}
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            {/* Кнопка "Добрать карты" - для всех игроков */}
-                            {gameInitialized && (
-                                <button 
-                                    onClick={handleDrawCards}
-                                    disabled={gameState.deck.length === 0 || (gameState.hands[myId]?.length || 0) >= 6}
-                            style={{
-                                padding: "8px 12px",
-                                        background: (gameState.deck.length === 0 || (gameState.hands[myId]?.length || 0) >= 6) ? "#6b7280" : "#10b981",
-                                border: "none",
-                                borderRadius: "6px",
-                                color: "#fff",
-                                        cursor: (gameState.deck.length === 0 || (gameState.hands[myId]?.length || 0) >= 6) ? "not-allowed" : "pointer",
-                                        fontSize: "12px",
-                                        opacity: (gameState.deck.length === 0 || (gameState.hands[myId]?.length || 0) >= 6) ? 0.5 : 1
-                            }}
-                        >
-                                    📚 Добрать карты
-                        </button>
-                            )}
+                            <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Seed:</span>
+                            <input
+                                type="number"
+                                value={seed}
+                                onChange={(e) => changeSeed(parseInt(e.target.value) || 42)}
+                                style={{
+                                    width: "80px",
+                                    padding: "4px 8px",
+                                    background: "#374151",
+                                    border: "1px solid #4B5563",
+                                    borderRadius: "4px",
+                                    color: "#fff",
+                                    fontSize: "12px"
+                                }}
+                            />
+                        </div>
+                        
+                        {/* Переключатель режимов атака/защита */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <button
+                                onClick={() => setGameMode('attack')}
+                                style={{
+                                    padding: "6px 12px",
+                                    background: gameMode === 'attack' ? "#dc2626" : "#374151",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "11px",
+                                    fontWeight: gameMode === 'attack' ? "bold" : "normal"
+                                }}
+                            >
+                                ⚔️ Атака
+                            </button>
+                            <button
+                                onClick={() => setGameMode('defense')}
+                                style={{
+                                    padding: "6px 12px",
+                                    background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "11px",
+                                    fontWeight: gameMode === 'defense' ? "bold" : "normal"
+                                }}
+                            >
+                                🛡️ Защита
+                            </button>
+                        </div>
+                        
+                        {/* Кнопки действий */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <button 
+                                onClick={handleTakeCards}
+                                disabled={!canTakeCards}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: canTakeCards ? "#f59e0b" : "#6b7280",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: canTakeCards ? "pointer" : "not-allowed",
+                                    fontSize: "12px",
+                                    opacity: canTakeCards ? 1 : 0.5
+                                }}
+                            >
+                                🃏 Взять карты
+                            </button>
                             
-                            {/* Кнопка "Взять карты" - только для защитника */}
-                            {gameInitialized && getCurrentPlayerRole() === 'defender' && (
-                        <button 
-                                    onClick={handleTakeCards}
-                                    disabled={!canTakeCards}
-                            style={{
-                                padding: "8px 12px",
-                                        background: canTakeCards ? "#f59e0b" : "#6b7280",
-                                border: "none",
-                                borderRadius: "6px",
-                                color: "#fff",
-                                        cursor: canTakeCards ? "pointer" : "not-allowed",
-                                        fontSize: "12px",
-                                        opacity: canTakeCards ? 1 : 0.5
-                            }}
-                        >
-                                    🃏 Взять карты
-                        </button>
-                            )}
-                            
-                            {/* Кнопки Бито и Пас - только для атакующих игроков после начала игры */}
-                            {gameInitialized && (getCurrentPlayerRole() === 'attacker' || getCurrentPlayerRole() === 'co-attacker') && (
-                                <>
-                                    {/* Кнопка Бито - только у игрока с приоритетом атаки */}
-                                    {shouldShowBitoButton() && canPlayerAttack() && (
-                                        <button 
-                                            onClick={handleBito}
-                                            disabled={!mainAttackerHasPlayed || 
-                                                hasUnbeatenCards() ||
-                                                (getCurrentPlayerRole() === 'attacker' && attackerBitoPressed) ||
-                                                (getCurrentPlayerRole() === 'co-attacker' && coAttackerBitoPressed)}
-                                            style={{
-                                                padding: "8px 12px",
-                                                background: (!mainAttackerHasPlayed || 
-                                                    hasUnbeatenCards() ||
-                                                    (getCurrentPlayerRole() === 'attacker' && attackerBitoPressed) ||
-                                                    (getCurrentPlayerRole() === 'co-attacker' && coAttackerBitoPressed)) ? "#6b7280" : "#8b5cf6",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                color: "#fff",
-                                                cursor: (!mainAttackerHasPlayed || 
-                                                    hasUnbeatenCards() ||
-                                                    (getCurrentPlayerRole() === 'attacker' && attackerBitoPressed) ||
-                                                    (getCurrentPlayerRole() === 'co-attacker' && coAttackerBitoPressed)) ? "not-allowed" : "pointer",
-                                                fontSize: "12px",
-                                                opacity: (!mainAttackerHasPlayed || 
-                                                    hasUnbeatenCards() ||
-                                                    (getCurrentPlayerRole() === 'attacker' && attackerBitoPressed) ||
-                                                    (getCurrentPlayerRole() === 'co-attacker' && coAttackerBitoPressed)) ? 0.5 : 1
-                                            }}
-                                        >
-                                            🚫 Бито
-                                        </button>
-                                    )}
-                                    
-                                    {/* Кнопка Пас - у всех атакующих игроков */}
-                                    <button 
-                                        onClick={handlePas}
-                                        disabled={!mainAttackerHasPlayed || 
-                                            hasUnbeatenCards() ||
-                                            (getCurrentPlayerRole() === 'attacker' && attackerPasPressed) ||
-                                            (getCurrentPlayerRole() === 'co-attacker' && coAttackerPasPressed)}
-                                        style={{
-                                            padding: "8px 12px",
-                                            background: (!mainAttackerHasPlayed || 
-                                                hasUnbeatenCards() ||
-                                                (getCurrentPlayerRole() === 'attacker' && attackerPasPressed) ||
-                                                (getCurrentPlayerRole() === 'co-attacker' && coAttackerPasPressed)) ? "#6b7280" : "#ef4444",
-                                            border: "none",
-                                            borderRadius: "6px",
-                                            color: "#fff",
-                                            cursor: (!mainAttackerHasPlayed || 
-                                                hasUnbeatenCards() ||
-                                                (getCurrentPlayerRole() === 'attacker' && attackerPasPressed) ||
-                                                (getCurrentPlayerRole() === 'co-attacker' && coAttackerPasPressed)) ? "not-allowed" : "pointer",
-                                            fontSize: "12px",
-                                            opacity: (!mainAttackerHasPlayed || 
-                                                hasUnbeatenCards() ||
-                                                (getCurrentPlayerRole() === 'attacker' && attackerPasPressed) ||
-                                                (getCurrentPlayerRole() === 'co-attacker' && coAttackerPasPressed)) ? 0.5 : 1
-                                        }}
-                                    >
-                                        🛑 Пас
-                                    </button>
-                                </>
-                            )}
+                            <button 
+                                onClick={handleBito}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#8b5cf6",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "12px"
+                                }}
+                            >
+                                🚫 Бито
+                            </button>
                         </div>
                         
                         <button 
@@ -2233,75 +1367,31 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                                 gap: "8px"
                             }}>
                                 <span>
-                                {gameState.players[pid]?.name || pid}
-                                {pid === myId ? " • вы" : ""}
-                                {pid === gameState.hostId ? " 👑" : ""}
+                                    {gameState.players[pid]?.name || pid}
+                                    {pid === myId ? " • вы" : ""}
+                                    {pid === gameState.hostId ? " 👑" : ""}
                                     {pid === gameState.currentTurn ? " ⏳" : ""}
                                 </span>
-                                {gameInitialized && playerRoles[pid] && (
-                                    <span style={{ fontSize: "14px" }}>
-                                        {getRoleEmoji(playerRoles[pid])}
-                                    </span>
-                                )}
                                 <span style={{ opacity: 0.7 }}>
                                     ({gameState.hands[pid]?.length || 0} карт)
                                 </span>
-                                {/* Кнопка переключения игрока - скрыта для наблюдателей после инициализации */}
-                                {(!gameInitialized || playerRoles[pid] !== 'observer') && (
-                                    <button
-                                        onClick={() => switchToPlayer(pid)}
-                                        disabled={gameInitialized && playerRoles[pid] === 'observer'}
-                                        style={{
-                                            padding: "2px 6px",
-                                            background: pid === myId ? "#047857" : "#374151",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            color: "#fff",
-                                            cursor: gameInitialized && playerRoles[pid] === 'observer' ? "not-allowed" : "pointer",
-                                            fontSize: "10px",
-                                            opacity: gameInitialized && playerRoles[pid] === 'observer' ? 0.5 : 1
-                                        }}
-                                    >
-                                        {pid === myId ? "Активен" : "Выбрать"}
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => switchToPlayer(pid)}
+                                    style={{
+                                        padding: "2px 6px",
+                                        background: pid === myId ? "#047857" : "#374151",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        color: "#fff",
+                                        cursor: "pointer",
+                                        fontSize: "10px"
+                                    }}
+                                >
+                                    {pid === myId ? "Активен" : "Выбрать"}
+                                </button>
                             </div>
                         ))}
                     </div>
-                    
-                    {/* Информация о приоритете атаки */}
-                    {gameInitialized && (
-                        <div style={{ 
-                            marginTop: "8px", 
-                            padding: "8px 12px", 
-                            background: "#1f2937", 
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            color: "#9CA3AF"
-                        }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span>🎯 Приоритет атаки:</span>
-                                <span style={{ 
-                                    color: attackPriority === 'attacker' ? "#10b981" : "#3b82f6",
-                                    fontWeight: "bold"
-                                }}>
-                                    {attackPriority === 'attacker' ? '⚔️⚔️ Главный атакующий' : '⚔️ Со-атакующий'}
-                                </span>
-                                {!mainAttackerHasPlayed && (
-                                    <span style={{ color: "#f59e0b", fontSize: "10px" }}>
-                                        (ждем первую карту от главного атакующего)
-                                    </span>
-                                )}
-                            </div>
-                            {(attackerPassed || coAttackerPassed) && (
-                                <div style={{ marginTop: "4px", fontSize: "10px" }}>
-                                    {attackerPassed && <span style={{ color: "#ef4444" }}>🚫 Главный атакующий отказался</span>}
-                                    {attackerPassed && coAttackerPassed && <span> • </span>}
-                                    {coAttackerPassed && <span style={{ color: "#ef4444" }}>🚫 Со-атакующий отказался</span>}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Game Board */}
@@ -2447,12 +1537,12 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                             <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
                                 🎮 Слоты на столе:
                             </div>
-                    <DropZone
-                        id="table"
-                        cards={gameState.slots || []}
+                            <DropZone
+                                id="table"
+                                cards={gameState.slots || []}
                                 minVisibleCards={1}
                                 gameMode={gameMode}
-                        onCardClick={(index) => {
+                                onCardClick={(index) => {
                                     console.log('Clicked table card:', index);
                                 }}
                                 onCardHover={handleAttackCardHover}
@@ -2503,17 +1593,17 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                         maxWidth: "100%",
                         overflow: "hidden"
                     }}>
-                    <DropZone
-                        id="my-hand"
-                        cards={myHand}
+                        <DropZone
+                            id="my-hand"
+                            cards={myHand}
                             maxVisibleCards={10}
                             defenseCards={defenseCards}
                             onMousePositionUpdate={setMousePosition}
                             activeCard={activeCard}
-                        onCardClick={(index) => {
-                            console.log('Clicked hand card:', index);
+                            onCardClick={(index) => {
+                                console.log('Clicked hand card:', index);
                                 
-                            const card = myHand[index];
+                                const card = myHand[index];
                                 
                                 if (gameMode === 'defense') {
                                     // В режиме защиты пытаемся отбить карту
@@ -2530,10 +1620,10 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                                         // Убираем карту из руки только если карта защиты была успешно добавлена
                                         if (defenseAdded) {
                                             setGameState((prev) => {
-                                    const myCards = [...(prev.hands[myId] || [])];
+                                                const myCards = [...(prev.hands[myId] || [])];
                                                 // Дополнительная проверка - убеждаемся, что карта по индексу существует
                                                 if (index >= 0 && index < myCards.length && myCards[index]?.id === card.id) {
-                                    myCards.splice(index, 1);
+                                                    myCards.splice(index, 1);
                                                     console.log(`✅ Карта "${card.name}" убрана из руки (клик). Осталось карт: ${myCards.length}`);
                                                 } else {
                                                     console.log(`⚠️ Карта "${card.name}" не найдена в руке по индексу ${index} (клик). Карты в руке:`, myCards.map(c => c.name));
@@ -2584,18 +1674,18 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                                         
                                         const slots = [...prev.slots];
                                         slots[freeSlotIndex] = card;
-                                    
-                                    return {
-                                        ...prev,
-                                        hands: { ...prev.hands, [myId]: myCards },
-                                        slots,
-                                    };
-                                });
+                                        
+                                        return {
+                                            ...prev,
+                                            hands: { ...prev.hands, [myId]: myCards },
+                                            slots,
+                                        };
+                                    });
                                 } else {
                                     alert('🃏 Стол полон! Максимум 6 карт.');
-                            }
-                        }}
-                    />
+                                }
+                            }}
+                        />
                     </div>
                 </div>
 
@@ -2607,7 +1697,7 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Debug V1 (New Turn System) активен | 👥 {playerCount} игроков | 🎲 Seed: {seed} | {gameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'} | 🃏 {myHand.length}/6 карт | 📚 Колода: {gameState.deck.length} карт | 🖱️ Drag & Drop активен</div>
+                    <div>🔄 Debug V2 активен | 🎲 Seed: {seed} | {gameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'} | 🃏 {myHand.length}/6 карт | 📚 Колода: {gameState.deck.length} карт | 🖱️ Drag & Drop активен</div>
                                     <div style={{ marginTop: "4px", fontSize: "10px", opacity: 0.6 }}>
                     🎯 Отладка: activeCard={activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Наведение атаки={hoveredAttackCard !== null ? `карта ${hoveredAttackCard}` : 'нет'} | Наведение защиты={hoveredDefenseCard !== null ? `карта ${hoveredDefenseCard}` : 'нет'} | Мышь={mousePosition ? `${mousePosition.x},${mousePosition.y}` : 'нет'} | Защита={defenseCards.filter(card => card !== null).length} карт | Атака={gameState.slots?.filter(s => s !== null).length || 0} карт
                 </div>
@@ -2722,75 +1812,9 @@ const DebugGameBoard: React.FC<DebugGameBoardProps> = ({ onBack }) => {
                         Сенсор (80px)
                     </div>
                 )}
-
-                {/* Модальное окно первого игрока */}
-                {showFirstPlayerModal && firstPlayerInfo && (
-                    <div style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: "rgba(0, 0, 0, 0.8)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 10000
-                    }}>
-                        <div style={{
-                            background: "#1f2937",
-                            border: "3px solid #10b981",
-                            borderRadius: "16px",
-                            padding: "32px",
-                            textAlign: "center",
-                            color: "#fff",
-                            maxWidth: "400px",
-                            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)"
-                        }}>
-                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>
-                                🎯
-                            </div>
-                            <h2 style={{ 
-                                color: "#10b981", 
-                                marginBottom: "16px", 
-                                fontSize: "24px",
-                                fontWeight: "bold"
-                            }}>
-                                Первый игрок определен!
-                            </h2>
-                            <div style={{ fontSize: "18px", marginBottom: "8px" }}>
-                                <strong>{firstPlayerInfo.playerName}</strong>
-                            </div>
-                            <div style={{ fontSize: "16px", marginBottom: "8px", opacity: 0.8 }}>
-                                Карта: <strong>{firstPlayerInfo.cardName}</strong>
-                            </div>
-                            <div style={{ fontSize: "16px", marginBottom: "24px", opacity: 0.8 }}>
-                                Сила: <strong>{firstPlayerInfo.power}</strong>
-                            </div>
-                            <div style={{ fontSize: "14px", marginBottom: "24px", opacity: 0.6 }}>
-                                Роли назначены по кругу от первого игрока
-                            </div>
-                            <button
-                                onClick={() => setShowFirstPlayerModal(false)}
-                                style={{
-                                    padding: "12px 24px",
-                                    background: "#10b981",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "16px",
-                                    fontWeight: "bold"
-                                }}
-                            >
-                                Закрыть
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
         </DndContext>
     );
 };
 
-export default DebugGameBoard;
+export default DebugGameBoardV2;

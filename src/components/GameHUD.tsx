@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GameState } from '../types';
 
 interface GameHUDProps {
     myId: string;
     game: GameState;
     currentTurn?: string;
-    onEndTurn?: () => void;
-    onPass?: () => void;
-    onTakeCards?: () => void;
+    onEndTurn: () => void;
+    onPass: () => void;
+    onTakeCards: () => void;
 }
 
 const GameHUD: React.FC<GameHUDProps> = ({
@@ -18,9 +18,12 @@ const GameHUD: React.FC<GameHUDProps> = ({
     onPass,
     onTakeCards
 }) => {
-    const playerIds = Object.keys(game.players || {});
-    const myHand = game.hands[myId] || [];
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const { players, hands, currentTurnIndex, turnOrder } = game;
+    
     const isMyTurn = currentTurn === myId;
+    const myHand = hands[myId] || [];
+    const playerCount = Object.keys(players).length;
 
     return (
         <div style={{
@@ -28,208 +31,163 @@ const GameHUD: React.FC<GameHUDProps> = ({
             top: 0,
             left: 0,
             right: 0,
-            zIndex: 100,
-            pointerEvents: "none"
+            background: "rgba(26, 26, 46, 0.95)",
+            backdropFilter: "blur(10px)",
+            borderBottom: "2px solid #7C3AED",
+            color: "#fff",
+            zIndex: 200,
+            transition: "all 0.3s ease",
+            height: isCollapsed ? "40px" : "80px"
         }}>
-            {/* Top HUD Bar */}
+            {/* Header with Collapse Button */}
             <div style={{
-                background: "linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(26, 26, 46, 0.8) 100%)",
-                backdropFilter: "blur(10px)",
-                borderBottom: "2px solid #8B0000",
-                padding: "12px 20px",
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
-                pointerEvents: "auto"
-            }}>
-                {/* Game Info */}
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <div style={{
-                        background: "#065f46",
-                        color: "#fff",
-                        padding: "6px 12px",
-                        borderRadius: "20px",
-                        fontSize: "14px",
-                        fontWeight: "bold"
-                    }}>
-                        🎮 Игра
+                justifyContent: "space-between",
+                padding: "8px 16px",
+                cursor: "pointer"
+            }} onClick={() => setIsCollapsed(!isCollapsed)}>
+                <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "12px",
+                    opacity: isCollapsed ? 0 : 1,
+                    transition: "opacity 0.3s ease"
+                }}>
+                    <h2 style={{ margin: 0, fontSize: "18px", color: "#A78BFA" }}>
+                        🎮 ИГРОВАЯ ИНФОРМАЦИЯ
+                    </h2>
+                    <div style={{ fontSize: "14px", opacity: 0.8 }}>
+                        Игроков: {playerCount} | Карт в руке: {myHand.length}
                     </div>
-                    
-                    {currentTurn && (
+                </div>
+                <button
+                    style={{
+                        background: "none",
+                        border: "none",
+                        color: "#A78BFA",
+                        fontSize: "18px",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        transition: "transform 0.3s ease"
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCollapsed(!isCollapsed);
+                    }}
+                >
+                    {isCollapsed ? "▶️" : "◀️"}
+                </button>
+            </div>
+
+            {!isCollapsed && (
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0 16px 8px 16px"
+                }}>
+                    {/* Turn Info */}
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "16px"
+                    }}>
                         <div style={{
-                            background: isMyTurn ? "#dc2626" : "#374151",
-                            color: "#fff",
-                            padding: "6px 12px",
-                            borderRadius: "20px",
+                            padding: "8px 12px",
+                            background: isMyTurn ? "rgba(16, 185, 129, 0.2)" : "rgba(107, 114, 128, 0.2)",
+                            border: `1px solid ${isMyTurn ? "#10B981" : "#6B7280"}`,
+                            borderRadius: "8px",
                             fontSize: "14px",
                             fontWeight: "bold",
-                            animation: isMyTurn ? "pulse 2s infinite" : "none"
+                            color: isMyTurn ? "#10B981" : "#6B7280"
                         }}>
-                            {isMyTurn ? "🎯 Ваш ход" : `Ход: ${game.players[currentTurn]?.name || currentTurn}`}
+                            {isMyTurn ? "🎯 Ваш ход" : "⏳ Ожидание"}
+                        </div>
+                        
+                        {currentTurn && (
+                            <div style={{
+                                padding: "8px 12px",
+                                background: "rgba(124, 58, 237, 0.2)",
+                                border: "1px solid #7C3AED",
+                                borderRadius: "8px",
+                                fontSize: "14px"
+                            }}>
+                                Ход: {players[currentTurn]?.name || currentTurn}
+                            </div>
+                        )}
+                        
+                        {turnOrder && currentTurnIndex !== undefined && (
+                            <div style={{
+                                padding: "8px 12px",
+                                background: "rgba(59, 130, 246, 0.2)",
+                                border: "1px solid #3B82F6",
+                                borderRadius: "8px",
+                                fontSize: "14px"
+                            }}>
+                                {currentTurnIndex + 1} / {turnOrder.length}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    {isMyTurn && (
+                        <div style={{
+                            display: "flex",
+                            gap: "8px"
+                        }}>
+                            <button
+                                onClick={onTakeCards}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#3B82F6",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "12px",
+                                    fontWeight: "bold"
+                                }}
+                            >
+                                📚 Взять карты
+                            </button>
+                            
+                            <button
+                                onClick={onPass}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#6B7280",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "12px",
+                                    fontWeight: "bold"
+                                }}
+                            >
+                                🚫 Пас
+                            </button>
+                            
+                            <button
+                                onClick={onEndTurn}
+                                style={{
+                                    padding: "8px 12px",
+                                    background: "#10B981",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontSize: "12px",
+                                    fontWeight: "bold"
+                                }}
+                            >
+                                ✅ Завершить ход
+                            </button>
                         </div>
                     )}
                 </div>
-
-                {/* Players Info */}
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {playerIds.map((pid) => (
-                        <div key={pid} style={{
-                            padding: "6px 10px",
-                            borderRadius: "20px",
-                            background: pid === myId 
-                                ? "#065f46" 
-                                : pid === currentTurn 
-                                    ? "#dc2626" 
-                                    : "#1f2937",
-                            fontSize: "12px",
-                            color: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            border: pid === currentTurn ? "2px solid #ffd700" : "none"
-                        }}>
-                            <span>{game.players[pid]?.name || pid}</span>
-                            {pid === myId && <span>• вы</span>}
-                            {pid === game.hostId && <span>👑</span>}
-                            <span style={{ opacity: 0.7 }}>
-                                ({game.hands[pid]?.length || 0})
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Bottom HUD Bar */}
-            <div style={{
-                position: "fixed",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: "linear-gradient(0deg, rgba(26, 26, 46, 0.95) 0%, rgba(26, 26, 46, 0.8) 100%)",
-                backdropFilter: "blur(10px)",
-                borderTop: "2px solid #8B0000",
-                padding: "12px 20px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                pointerEvents: "auto"
-            }}>
-                {/* My Hand Info */}
-                <div style={{
-                    background: "#1a1a2e",
-                    padding: "8px 16px",
-                    borderRadius: "12px",
-                    border: "2px solid #8B0000",
-                    color: "#fff"
-                }}>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "4px" }}>
-                        🃏 Моя рука
-                    </div>
-                    <div style={{ fontSize: "12px", opacity: 0.8 }}>
-                        Карт: {myHand.length} | Общая сила: {myHand.reduce((sum, card) => sum + card.power, 0)}
-                    </div>
-                </div>
-
-                {/* Game Controls */}
-                {isMyTurn && (
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                            onClick={onEndTurn}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#065f46",
-                                border: "none",
-                                borderRadius: "8px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                                fontWeight: "bold"
-                            }}
-                        >
-                            ✅ Завершить ход
-                        </button>
-                        
-                        <button
-                            onClick={onPass}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#dc2626",
-                                border: "none",
-                                borderRadius: "8px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                                fontWeight: "bold"
-                            }}
-                        >
-                            🚫 Пас
-                        </button>
-                        
-                        <button
-                            onClick={onTakeCards}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#7c3aed",
-                                border: "none",
-                                borderRadius: "8px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                                fontWeight: "bold"
-                            }}
-                        >
-                            📥 Взять карты
-                        </button>
-                    </div>
-                )}
-
-                {/* Game Stats */}
-                <div style={{
-                    background: "#1a1a2e",
-                    padding: "8px 16px",
-                    borderRadius: "12px",
-                    border: "2px solid #334155",
-                    color: "#fff"
-                }}>
-                    <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "4px" }}>
-                        📊 Статистика
-                    </div>
-                    <div style={{ fontSize: "12px", opacity: 0.8 }}>
-                        Игроков: {playerIds.length} | Карт на столе: {game.slots?.filter(s => s !== null).length || 0}
-                    </div>
-                </div>
-            </div>
-
-            {/* Turn Indicator */}
-            {isMyTurn && (
-                <div style={{
-                    position: "fixed",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    background: "rgba(220, 38, 38, 0.9)",
-                    color: "#fff",
-                    padding: "16px 32px",
-                    borderRadius: "12px",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    animation: "pulse 1s infinite",
-                    pointerEvents: "none",
-                    zIndex: 200
-                }}>
-                    🎯 ВАШ ХОД!
-                </div>
             )}
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                    @keyframes pulse {
-                        0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                        50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.05); }
-                        100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                    }
-                `
-            }} />
         </div>
     );
 };
