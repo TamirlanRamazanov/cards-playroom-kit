@@ -100,6 +100,23 @@ const createBasicGameState = (seed: number = 42, playerCount: number = 4): GameS
         maxCardPower: 100,
         canDefendWithEqualPower: true,
     
+    // Role system defaults
+    playerRoles: Object.fromEntries(turnOrder.map(pid => [pid, 'observer'] as const)),
+    attackPriority: 'attacker',
+    mainAttackerHasPlayed: false,
+    attackerPassed: false,
+    coAttackerPassed: false,
+    attackerBitoPressed: false,
+    coAttackerBitoPressed: false,
+    attackerPasPressed: false,
+    coAttackerPasPressed: false,
+    
+    // Draw queue
+    drawQueue: [],
+    
+    // Game initialization
+    gameInitialized: false,
+    
     // Turn control system
     turnActions: {
         canEndTurn: true,

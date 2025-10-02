@@ -102,6 +102,28 @@ const createBasicGameState = (seed: number = 42): GameState => {
         maxCardPower: 100,
         canDefendWithEqualPower: true,
         
+        // Role system defaults
+        playerRoles: {
+            "player-1": 'observer',
+            "player-2": 'observer',
+            "player-3": 'observer',
+            "player-4": 'observer',
+        },
+        attackPriority: 'attacker',
+        mainAttackerHasPlayed: false,
+        attackerPassed: false,
+        coAttackerPassed: false,
+        attackerBitoPressed: false,
+        coAttackerBitoPressed: false,
+        attackerPasPressed: false,
+        coAttackerPasPressed: false,
+        
+        // Draw queue
+        drawQueue: [],
+        
+        // Game initialization
+        gameInitialized: false,
+        
         // Turn control system
         turnActions: {
             canEndTurn: true,
