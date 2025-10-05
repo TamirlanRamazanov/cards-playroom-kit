@@ -113,7 +113,7 @@ const DefenseCardDropZone: React.FC<{
             type: 'defense-card',
             attackIndex
         },
-        disabled: gameMode === 'attack' && defenseCard === null // Отключаем drop zone для пустых слотов в режиме атаки
+        disabled: gameMode === 'defense' // Отключаем drop zone в режиме защиты, активируем в режиме атаки
     });
 
     return (
@@ -138,11 +138,11 @@ const DefenseCardDropZone: React.FC<{
                 onMouseEnter={() => {
                     console.log(`🔍 DEFENSE ENTER: attackIndex=${attackIndex}, gameMode=${gameMode}, defenseCard=${!!defenseCard}`);
                     if (gameMode === 'attack') {
-                        // В режиме атаки активируем ховер для карт защиты
+                        // В режиме атаки активируем ховер для карт защиты (для drop на них)
                         console.log(`🎯 DEFENSE: Активируем ховер для слота защиты ${attackIndex} в режиме атаки`);
                         onDefenseCardHover?.(attackIndex);
-                    } else {
-                        // В режиме защиты активируем обычный ховер
+                    } else if (gameMode === 'defense') {
+                        // В режиме защиты активируем обычный ховер (для отбивания)
                         console.log(`🎯 DEFENSE: Активируем ховер для слота ${attackIndex} в режиме защиты`);
                         onCardHover?.(attackIndex);
                     }
@@ -153,7 +153,7 @@ const DefenseCardDropZone: React.FC<{
                         // В режиме атаки деактивируем ховер для карт защиты
                         console.log(`🎯 DEFENSE: Деактивируем ховер для слота защиты ${attackIndex} в режиме атаки`);
                         onDefenseCardLeave?.();
-                    } else {
+                    } else if (gameMode === 'defense') {
                         // В режиме защиты деактивируем обычный ховер
                         console.log(`🎯 DEFENSE: Деактивируем ховер для слота ${attackIndex} в режиме защиты`);
                         onCardLeave?.();

@@ -100,12 +100,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     };
 
     const handleDefenseCardSlotHover = (attackIndex: number) => {
-        console.log(`🎯 Hover defense card slot: ${attackIndex}`);
+        console.log(`🎯 Hover defense card slot: ${attackIndex}, gameMode: ${gameMode}, role: ${getCurrentPlayerRole()}`);
         setHoveredDefenseCard(attackIndex);
     };
 
     const handleDefenseCardSlotLeave = () => {
-        console.log(`🎯 Leave defense card slot`);
+        console.log(`🎯 Leave defense card slot, gameMode: ${gameMode}, role: ${getCurrentPlayerRole()}`);
         setHoveredDefenseCard(null);
     };
 
@@ -723,6 +723,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
         setActiveCard(null);
         setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
 
         if (!over) {
             console.log('❌ Нет цели для drop');
