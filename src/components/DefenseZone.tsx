@@ -194,6 +194,20 @@ const DefenseCardDropZone: React.FC<{
                                 onCardLeave?.();
                             }
                         }}
+                        onTouchStart={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardHover?.(attackIndex);
+                            } else if (playerRole === 'defender') {
+                                onCardHover?.(attackIndex);
+                            }
+                        }}
+                        onTouchEnd={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardLeave?.();
+                            } else if (playerRole === 'defender') {
+                                onCardLeave?.();
+                            }
+                        }}
                         isDraggable={false} // Карты защиты пока не перетаскиваем
                         isDefenseHighlighted={
                             (playerRole === 'attacker' || playerRole === 'co-attacker') 
@@ -204,6 +218,20 @@ const DefenseCardDropZone: React.FC<{
                     />
                 ) : (
                     <div
+                        onTouchStart={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardHover?.(attackIndex);
+                            } else if (playerRole === 'defender') {
+                                onCardHover?.(attackIndex);
+                            }
+                        }}
+                        onTouchEnd={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardLeave?.();
+                            } else if (playerRole === 'defender') {
+                                onCardLeave?.();
+                            }
+                        }}
                         style={{
                             width: `${cardWidth}px`,
                             height: "160px",

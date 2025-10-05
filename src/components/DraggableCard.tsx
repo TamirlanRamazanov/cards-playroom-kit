@@ -11,6 +11,8 @@ interface DraggableCardProps {
     onClick?: () => void;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
+    onTouchStart?: () => void;
+    onTouchEnd?: () => void;
     isHighlighted?: boolean; // Для подсветки карт атаки в режиме защиты
     isDefenseHighlighted?: boolean; // Для подсветки карт защиты в режиме атаки
     isDraggable?: boolean; // Можно ли перетаскивать карту
@@ -26,6 +28,8 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
     onClick,
     onMouseEnter,
     onMouseLeave,
+    onTouchStart,
+    onTouchEnd,
     isHighlighted = false,
     isDefenseHighlighted = false,
     isDraggable = true,
@@ -112,6 +116,8 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
                 onClick={disableMouseEvents ? undefined : onClick}
                 onMouseEnter={disableMouseEvents ? undefined : onMouseEnter}
                 onMouseLeave={disableMouseEvents ? undefined : onMouseLeave}
+                onTouchStart={disableMouseEvents ? undefined : onTouchStart}
+                onTouchEnd={disableMouseEvents ? undefined : onTouchEnd}
             style={{
                 height: isAttacking ? 180 : 160, // Карты атаки больше
                 width: isAttacking ? 140 : 120,  // Карты атаки шире
