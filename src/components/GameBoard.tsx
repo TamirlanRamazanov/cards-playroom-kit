@@ -33,7 +33,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
-    // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+    const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+    const [showSensorCircle, setShowSensorCircle] = useState<boolean>(false);
     const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
     // const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
     // const [canTakeCards, setCanTakeCards] = useState<boolean>(false);
@@ -69,6 +70,21 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     useEffect(() => {
         updateActiveFactionsDisplay();
     }, [game.slots, game.defenseSlots, activeFirstAttackFactions, usedDefenseCardFactions]);
+
+    // Глобальный обработчик мыши для отслеживания позиции курсора
+    useEffect(() => {
+        if (showSensorCircle || activeCard) {
+            const handleGlobalMouseMove = (e: MouseEvent) => {
+                setMousePosition({ x: e.clientX, y: e.clientY });
+            };
+
+            document.addEventListener('mousemove', handleGlobalMouseMove);
+
+            return () => {
+                document.removeEventListener('mousemove', handleGlobalMouseMove);
+            };
+        }
+    }, [showSensorCircle, activeCard]);
 
     // useEffect для синхронизации defenseCards с глобальным game.defenseSlots
     useEffect(() => {
@@ -1235,6 +1251,19 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             Завершить игру
                         </button>
                         
+                        {/* Кнопка сенсора */}
+                        <button
+                            onClick={() => setShowSensorCircle(!showSensorCircle)}
+                            className="game-button"
+                            style={{
+                                ...gameButtonStyle,
+                                backgroundColor: showSensorCircle ? '#059669' : '#6b7280',
+                                border: `1px solid ${showSensorCircle ? '#059669' : '#6b7280'}`,
+                            }}
+                        >
+                            {showSensorCircle ? "Скрыть сенсор" : "Показать сенсор"}
+                        </button>
+                        
                         {/* Кнопки управления игрой */}
                         {game.gameInitialized && (
                             <>
@@ -1343,6 +1372,9 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     </div>
                     <div style={{ fontSize: 10, opacity: 0.7 }}>
                         Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck?.length || 0} | Сброс: {game.discardPile?.length || 0}
+                    </div>
+                    <div style={{ fontSize: 9, opacity: 0.5, marginTop: 2 }}>
+                        🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
                     </div>
                 </div>
                 
@@ -1549,6 +1581,24 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             )}
 
             <GameOverModal game={game} onRestartToLobby={onRestartToLobby} />
+            
+            {/* Визуальный индикатор сенсора - при зажатой карте или при включенной кнопке отладки */}
+            {(activeCard || showSensorCircle) && mousePosition && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: mousePosition.x - 80,
+                        top: mousePosition.y - 80,
+                        width: '160px',
+                        height: '160px',
+                        border: '2px dashed rgba(255, 255, 0, 0.5)',
+                        borderRadius: '50%',
+                        pointerEvents: 'none',
+                        zIndex: 9999,
+                        background: 'rgba(255, 255, 0, 0.1)'
+                    }}
+                />
+            )}
             
             <DragOverlay>
                 {activeCard ? (
