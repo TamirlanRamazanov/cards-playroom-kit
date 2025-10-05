@@ -1239,6 +1239,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     invalidDefenseCard={null}
                                     onDefenseCardHover={handleDefenseCardSlotHover}
                                     onDefenseCardLeave={handleDefenseCardSlotLeave}
+                                    playerRole={getCurrentPlayerRole()}
                                 />
                                     </div>
                             )}

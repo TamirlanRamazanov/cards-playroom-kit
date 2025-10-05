@@ -14,6 +14,7 @@ interface DefenseZoneProps {
     invalidDefenseCard?: number | null; // Индекс невалидной карты защиты
     onDefenseCardHover?: (attackIndex: number) => void;
     onDefenseCardLeave?: () => void;
+    playerRole?: 'attacker' | 'co-attacker' | 'defender' | 'observer' | null;
 }
 
 const DefenseZone: React.FC<DefenseZoneProps> = ({
@@ -26,7 +27,8 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
     gameMode,
     invalidDefenseCard,
     onDefenseCardHover,
-    onDefenseCardLeave
+    onDefenseCardLeave,
+    playerRole
 }) => {
     // Вычисляем ширину контейнера на основе количества карт атаки
     const attackCardsCount = attackCards.filter(card => card !== null).length;
@@ -74,6 +76,7 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
                         invalidDefenseCard={invalidDefenseCard}
                         onDefenseCardHover={onDefenseCardHover}
                         onDefenseCardLeave={onDefenseCardLeave}
+                        playerRole={playerRole}
                     />
                 );
             })}
@@ -94,6 +97,7 @@ const DefenseCardDropZone: React.FC<{
     invalidDefenseCard?: number | null;
     onDefenseCardHover?: (attackIndex: number) => void;
     onDefenseCardLeave?: () => void;
+    playerRole?: 'attacker' | 'co-attacker' | 'defender' | 'observer' | null;
 }> = ({
     attackIndex,
     cardWidth,
@@ -105,7 +109,8 @@ const DefenseCardDropZone: React.FC<{
     onCardClick,
     invalidDefenseCard,
     onDefenseCardHover,
-    onDefenseCardLeave
+    onDefenseCardLeave,
+    playerRole
 }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: `defense-card-${attackIndex}`,
@@ -113,7 +118,7 @@ const DefenseCardDropZone: React.FC<{
             type: 'defense-card',
             attackIndex
         },
-        disabled: gameMode === 'defense' // Отключаем drop zone в режиме защиты, активируем в режиме атаки
+        disabled: playerRole === 'defender' // Отключаем drop zone для защитника, активируем для атакующих
     });
 
     return (
@@ -136,32 +141,32 @@ const DefenseCardDropZone: React.FC<{
         >
             <div
                 onMouseEnter={() => {
-                    console.log(`🔍 DEFENSE ENTER: attackIndex=${attackIndex}, gameMode=${gameMode}, defenseCard=${!!defenseCard}`);
-                    if (gameMode === 'attack') {
-                        // В режиме атаки активируем ховер для карт защиты (для drop на них)
-                        console.log(`🎯 DEFENSE: Активируем ховер для слота защиты ${attackIndex} в режиме атаки`);
+                    console.log(`🔍 DEFENSE ENTER: attackIndex=${attackIndex}, gameMode=${gameMode}, playerRole=${playerRole}, defenseCard=${!!defenseCard}`);
+                    if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                        // Для атакующих игроков активируем ховер для карт защиты (для drop на них)
+                        console.log(`🎯 DEFENSE: Активируем ховер для слота защиты ${attackIndex} для атакующего игрока`);
                         onDefenseCardHover?.(attackIndex);
-                    } else if (gameMode === 'defense') {
-                        // В режиме защиты активируем обычный ховер (для отбивания)
-                        console.log(`🎯 DEFENSE: Активируем ховер для слота ${attackIndex} в режиме защиты`);
+                    } else if (playerRole === 'defender') {
+                        // Для защитника активируем обычный ховер (для отбивания)
+                        console.log(`🎯 DEFENSE: Активируем ховер для слота ${attackIndex} для защитника`);
                         onCardHover?.(attackIndex);
                     }
                 }}
                 onMouseLeave={() => {
-                    console.log(`🔍 DEFENSE LEAVE: attackIndex=${attackIndex}, gameMode=${gameMode}`);
-                    if (gameMode === 'attack') {
-                        // В режиме атаки деактивируем ховер для карт защиты
-                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота защиты ${attackIndex} в режиме атаки`);
+                    console.log(`🔍 DEFENSE LEAVE: attackIndex=${attackIndex}, gameMode=${gameMode}, playerRole=${playerRole}`);
+                    if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                        // Для атакующих игроков деактивируем ховер для карт защиты
+                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота защиты ${attackIndex} для атакующего игрока`);
                         onDefenseCardLeave?.();
-                    } else if (gameMode === 'defense') {
-                        // В режиме защиты деактивируем обычный ховер
-                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота ${attackIndex} в режиме защиты`);
+                    } else if (playerRole === 'defender') {
+                        // Для защитника деактивируем обычный ховер
+                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота ${attackIndex} для защитника`);
                         onCardLeave?.();
                     }
                 }}
                 style={{
-                    cursor: gameMode === 'attack' ? 'pointer' : 'default', // В режиме атаки показываем pointer для интерактивности
-                    opacity: 1 // Убираем приглушение, чтобы карты защиты были видны в режиме атаки
+                    cursor: (playerRole === 'attacker' || playerRole === 'co-attacker') ? 'pointer' : 'default', // Для атакующих показываем pointer
+                    opacity: 1 // Убираем приглушение, чтобы карты защиты были видны
                 }}
             >
                 {defenseCard ? (
