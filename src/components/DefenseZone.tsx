@@ -15,6 +15,7 @@ interface DefenseZoneProps {
     onDefenseCardHover?: (attackIndex: number) => void;
     onDefenseCardLeave?: () => void;
     playerRole?: 'attacker' | 'co-attacker' | 'defender' | 'observer' | null;
+    highlightedDefenseCardIndex?: number | null; // Индекс подсвеченной карты защиты для атакующих
 }
 
 const DefenseZone: React.FC<DefenseZoneProps> = ({
@@ -28,7 +29,8 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
     invalidDefenseCard,
     onDefenseCardHover,
     onDefenseCardLeave,
-    playerRole
+    playerRole,
+    highlightedDefenseCardIndex
 }) => {
     // Вычисляем ширину контейнера на основе количества карт атаки
     const attackCardsCount = attackCards.filter(card => card !== null).length;
@@ -77,6 +79,7 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
                         onDefenseCardHover={onDefenseCardHover}
                         onDefenseCardLeave={onDefenseCardLeave}
                         playerRole={playerRole}
+                        highlightedDefenseCardIndex={highlightedDefenseCardIndex}
                     />
                 );
             })}
@@ -98,6 +101,7 @@ const DefenseCardDropZone: React.FC<{
     onDefenseCardHover?: (attackIndex: number) => void;
     onDefenseCardLeave?: () => void;
     playerRole?: 'attacker' | 'co-attacker' | 'defender' | 'observer' | null;
+    highlightedDefenseCardIndex?: number | null;
 }> = ({
     attackIndex,
     cardWidth,
@@ -110,7 +114,8 @@ const DefenseCardDropZone: React.FC<{
     invalidDefenseCard,
     onDefenseCardHover,
     onDefenseCardLeave,
-    playerRole
+    playerRole,
+    highlightedDefenseCardIndex
 }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: `defense-card-${attackIndex}`,
@@ -175,37 +180,68 @@ const DefenseCardDropZone: React.FC<{
                         index={attackIndex}
                         isDefending={true}
                         onClick={() => onCardClick?.(attackIndex)}
-                        onMouseEnter={() => onCardHover?.(attackIndex)}
-                        onMouseLeave={onCardLeave}
+                        onMouseEnter={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardHover?.(attackIndex);
+                            } else if (playerRole === 'defender') {
+                                onCardHover?.(attackIndex);
+                            }
+                        }}
+                        onMouseLeave={() => {
+                            if (playerRole === 'attacker' || playerRole === 'co-attacker') {
+                                onDefenseCardLeave?.();
+                            } else if (playerRole === 'defender') {
+                                onCardLeave?.();
+                            }
+                        }}
                         isDraggable={false} // Карты защиты пока не перетаскиваем
-                        isDefenseHighlighted={highlightedCardIndex === attackIndex}
-                        disableMouseEvents={gameMode === 'attack'} // Отключаем события мыши в режиме атаки
+                        isDefenseHighlighted={
+                            (playerRole === 'attacker' || playerRole === 'co-attacker') 
+                                ? highlightedDefenseCardIndex === attackIndex
+                                : highlightedCardIndex === attackIndex
+                        }
+                        disableMouseEvents={false} // Включаем события мыши для всех ролей
                     />
                 ) : (
                     <div
                         style={{
                             width: `${cardWidth}px`,
                             height: "160px",
-                            border: highlightedCardIndex === attackIndex 
-                                ? "2px solid #32CD32" // Зеленый для подсветки
-                                : invalidDefenseCard === attackIndex
-                                ? "2px solid #FF0000" // Красный для невалидных карт
-                                : "2px dashed rgba(65, 105, 225, 0.3)",
+                            border: (() => {
+                                if (invalidDefenseCard === attackIndex) return "2px solid #FF0000"; // Красный для невалидных карт
+                                if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
+                                    return "2px solid #32CD32"; // Зеленый для подсветки атакующими
+                                }
+                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                    return "2px solid #32CD32"; // Зеленый для подсветки защитником
+                                }
+                                return "2px dashed rgba(65, 105, 225, 0.3)";
+                            })(),
                             borderRadius: "12px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: highlightedCardIndex === attackIndex 
-                                ? "#32CD32" // Зеленый для подсветки
-                                : invalidDefenseCard === attackIndex
-                                ? "#FF0000" // Красный для невалидных карт
-                                : "rgba(65, 105, 225, 0.5)",
+                            color: (() => {
+                                if (invalidDefenseCard === attackIndex) return "#FF0000"; // Красный для невалидных карт
+                                if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
+                                    return "#32CD32"; // Зеленый для подсветки атакующими
+                                }
+                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                    return "#32CD32"; // Зеленый для подсветки защитником
+                                }
+                                return "rgba(65, 105, 225, 0.5)";
+                            })(),
                             fontSize: "12px",
-                            background: highlightedCardIndex === attackIndex 
-                                ? "rgba(50, 205, 50, 0.1)" // Светло-зеленый фон для подсветки
-                                : invalidDefenseCard === attackIndex
-                                ? "rgba(255, 0, 0, 0.1)" // Светло-красный фон для невалидных карт
-                                : "rgba(65, 105, 225, 0.05)"
+                            background: (() => {
+                                if (invalidDefenseCard === attackIndex) return "rgba(255, 0, 0, 0.1)"; // Светло-красный фон для невалидных карт
+                                if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
+                                    return "rgba(50, 205, 50, 0.1)"; // Светло-зеленый фон для подсветки атакующими
+                                }
+                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                    return "rgba(50, 205, 50, 0.1)"; // Светло-зеленый фон для подсветки защитником
+                                }
+                                return "rgba(65, 105, 225, 0.05)";
+                            })()
                         }}
                     >
                         {invalidDefenseCard === attackIndex ? "❌ Слабая" : "Защита"}

@@ -1240,6 +1240,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     onDefenseCardHover={handleDefenseCardSlotHover}
                                     onDefenseCardLeave={handleDefenseCardSlotLeave}
                                     playerRole={getCurrentPlayerRole()}
+                                    highlightedDefenseCardIndex={hoveredDefenseCard}
                                 />
                                     </div>
                             )}
