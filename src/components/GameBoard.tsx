@@ -32,6 +32,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // Состояния для drag&drop
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
+    const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
     // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
     // const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
@@ -96,6 +97,16 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     const handleDefenseCardLeave = () => {
         console.log(`🎯 Leave defense card`);
         setHoveredAttackCard(null);
+    };
+
+    const handleDefenseCardSlotHover = (attackIndex: number) => {
+        console.log(`🎯 Hover defense card slot: ${attackIndex}`);
+        setHoveredDefenseCard(attackIndex);
+    };
+
+    const handleDefenseCardSlotLeave = () => {
+        console.log(`🎯 Leave defense card slot`);
+        setHoveredDefenseCard(null);
     };
 
     // Функции для drop zone активации
@@ -727,6 +738,72 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const targetZone = over.id as string;
         console.log('🎯 Целевая зона:', targetZone);
 
+        // Перемещение карты из руки на отдельную карту защиты
+        if (cardData.source === 'hand' && targetZone.startsWith('defense-card-')) {
+            const attackIndex = parseInt(targetZone.replace('defense-card-', ''));
+            console.log('🎯 Карта отпущена над картой защиты, добавляем в див атаки');
+            
+            // Определяем карту защиты
+            let defenseCard: Card | null = null;
+            if (hoveredDefenseCard !== null && game.defenseSlots?.[hoveredDefenseCard]) {
+                defenseCard = game.defenseSlots[hoveredDefenseCard];
+            } else if (game.defenseSlots?.[attackIndex]) {
+                defenseCard = game.defenseSlots[attackIndex];
+            }
+            
+            if (!defenseCard) {
+                console.log('❌ Карта защиты не найдена');
+                return;
+            }
+            
+            // В режиме атаки добавляем карту на стол
+            const validation = validateAttackCard(cardData.card);
+            if (!validation.isValid) {
+                console.log('❌ Карта не прошла валидацию:', validation.reason);
+                alert(validation.reason);
+                return;
+            }
+
+            // Находим свободный слот
+            const freeSlotIndex = game.slots?.findIndex(slot => slot === null) ?? -1;
+            
+            if (freeSlotIndex >= 0) {
+                console.log('🎯 Добавляем карту в слот', freeSlotIndex);
+                
+                updateGame((prev) => {
+                    const myCards = [...(prev.hands[myId] || [])];
+                    myCards.splice(cardData.index, 1);
+                    
+                    const slots = [...(prev.slots || [])];
+                    slots[freeSlotIndex] = cardData.card;
+                    
+                    // Отмечаем, что главный атакующий подкинул карту
+                    let newState = {
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
+
+                    if (getCurrentPlayerRole() === 'attacker') {
+                        newState.mainAttackerHasPlayed = true;
+                        console.log('🎯 Главный атакующий подкинул карту');
+                    }
+
+                    // Обновляем фракции после добавления карты
+                    updateActiveFactionsFromAttackCard(cardData.card);
+
+                    // Добавляем игрока в очередь добора
+                    addToDrawQueue(myId, false);
+
+                    return tryDeclareWinner(newState);
+                });
+            } else {
+                console.log('❌ Нет свободных слотов');
+                alert('❌ Нет свободных слотов на столе!');
+            }
+            return;
+        }
+
         // Перемещение карты из руки на стол
         if (cardData.source === 'hand' && targetZone === 'table') {
             // Проверяем режим: в режиме защиты нельзя добавлять карты на стол атаки
@@ -1150,7 +1227,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     </div>
                                 <DefenseZone
                                     attackCards={game.slots || []}
-                                    defenseCards={defenseCards}
+                                    defenseCards={game.defenseSlots || []}
                                     onCardClick={(attackIndex) => {
                                         console.log('Clicked defense card:', attackIndex);
                                     }}
@@ -1159,6 +1236,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     highlightedCardIndex={hoveredAttackCard}
                                     gameMode={gameMode}
                                     invalidDefenseCard={null}
+                                    onDefenseCardHover={handleDefenseCardSlotHover}
+                                    onDefenseCardLeave={handleDefenseCardSlotLeave}
                                 />
                                     </div>
                             )}

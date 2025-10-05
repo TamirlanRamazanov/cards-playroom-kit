@@ -12,6 +12,8 @@ interface DefenseZoneProps {
     highlightedCardIndex?: number | null;
     gameMode?: 'attack' | 'defense';
     invalidDefenseCard?: number | null; // Индекс невалидной карты защиты
+    onDefenseCardHover?: (attackIndex: number) => void;
+    onDefenseCardLeave?: () => void;
 }
 
 const DefenseZone: React.FC<DefenseZoneProps> = ({
@@ -22,7 +24,9 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
     onCardLeave,
     highlightedCardIndex,
     gameMode,
-    invalidDefenseCard
+    invalidDefenseCard,
+    onDefenseCardHover,
+    onDefenseCardLeave
 }) => {
     // Вычисляем ширину контейнера на основе количества карт атаки
     const attackCardsCount = attackCards.filter(card => card !== null).length;
@@ -68,6 +72,8 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
                         onCardLeave={onCardLeave}
                         onCardClick={onCardClick}
                         invalidDefenseCard={invalidDefenseCard}
+                        onDefenseCardHover={onDefenseCardHover}
+                        onDefenseCardLeave={onDefenseCardLeave}
                     />
                 );
             })}
@@ -86,6 +92,8 @@ const DefenseCardDropZone: React.FC<{
     onCardLeave?: () => void;
     onCardClick?: (attackIndex: number) => void;
     invalidDefenseCard?: number | null;
+    onDefenseCardHover?: (attackIndex: number) => void;
+    onDefenseCardLeave?: () => void;
 }> = ({
     attackIndex,
     cardWidth,
@@ -95,7 +103,9 @@ const DefenseCardDropZone: React.FC<{
     onCardHover,
     onCardLeave,
     onCardClick,
-    invalidDefenseCard
+    invalidDefenseCard,
+    onDefenseCardHover,
+    onDefenseCardLeave
 }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: `defense-card-${attackIndex}`,
@@ -126,28 +136,32 @@ const DefenseCardDropZone: React.FC<{
         >
             <div
                 onMouseEnter={() => {
-                    // В режиме атаки не реагируем на слоты защиты
                     console.log(`🔍 DEFENSE ENTER: attackIndex=${attackIndex}, gameMode=${gameMode}, defenseCard=${!!defenseCard}`);
-                    if (gameMode !== 'attack') {
-                        console.log(`🎯 DEFENSE: Активируем ховер для слота ${attackIndex}`);
-                        onCardHover?.(attackIndex);
+                    if (gameMode === 'attack') {
+                        // В режиме атаки активируем ховер для карт защиты
+                        console.log(`🎯 DEFENSE: Активируем ховер для слота защиты ${attackIndex} в режиме атаки`);
+                        onDefenseCardHover?.(attackIndex);
                     } else {
-                        console.log(`🚫 DEFENSE: Блокируем ховер в режиме атаки для слота ${attackIndex}`);
+                        // В режиме защиты активируем обычный ховер
+                        console.log(`🎯 DEFENSE: Активируем ховер для слота ${attackIndex} в режиме защиты`);
+                        onCardHover?.(attackIndex);
                     }
                 }}
                 onMouseLeave={() => {
-                    // В режиме атаки не реагируем на слоты защиты
                     console.log(`🔍 DEFENSE LEAVE: attackIndex=${attackIndex}, gameMode=${gameMode}`);
-                    if (gameMode !== 'attack') {
-                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота ${attackIndex}`);
-                        onCardLeave?.();
+                    if (gameMode === 'attack') {
+                        // В режиме атаки деактивируем ховер для карт защиты
+                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота защиты ${attackIndex} в режиме атаки`);
+                        onDefenseCardLeave?.();
                     } else {
-                        console.log(`🚫 DEFENSE: Блокируем деактивацию в режиме атаки для слота ${attackIndex}`);
+                        // В режиме защиты деактивируем обычный ховер
+                        console.log(`🎯 DEFENSE: Деактивируем ховер для слота ${attackIndex} в режиме защиты`);
+                        onCardLeave?.();
                     }
                 }}
                 style={{
-                    cursor: gameMode === 'attack' ? 'not-allowed' : 'default', // В режиме атаки показываем not-allowed
-                    opacity: gameMode === 'attack' ? 0.5 : 1 // Приглушаем все слоты в режиме атаки
+                    cursor: gameMode === 'attack' ? 'pointer' : 'default', // В режиме атаки показываем pointer для интерактивности
+                    opacity: 1 // Убираем приглушение, чтобы карты защиты были видны в режиме атаки
                 }}
             >
                 {defenseCard ? (
