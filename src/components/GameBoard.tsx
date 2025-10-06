@@ -43,13 +43,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     
     // Состояния для игровой логики
     const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
-    const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     
-    // Состояния для фракционной системы
-    const [factionCounter, setFactionCounter] = useState<Record<number, number>>({});
-    const [activeFactions, setActiveFactions] = useState<string[]>([]);
-    // const [defenseFactionsBuffer, setDefenseFactionsBuffer] = useState<Record<number, number>>({});
-    const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
+    // Используем глобальное состояние для фракций
+    const factionCounter = game.factionCounter || {};
+    const activeFactions = game.displayActiveFactions || [];
     
     // Состояния для системы инициализации
     const [showGameInitialization, setShowGameInitialization] = useState<boolean>(false);
@@ -69,7 +66,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // useEffect для обновления отображения активных фракций
     useEffect(() => {
         updateActiveFactionsDisplay();
-    }, [game.slots, game.defenseSlots, activeFirstAttackFactions, usedDefenseCardFactions]);
+    }, [game.slots, game.defenseSlots, game.activeFirstAttackFactions, game.usedDefenseCardFactions]);
 
     // Глобальный обработчик мыши для отслеживания позиции курсора
     useEffect(() => {
@@ -114,12 +111,15 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
     const handleDefenseCardHover = (index: number) => {
         console.log(`🎯 Hover defense card: ${index}`);
-        setHoveredAttackCard(index);
+        // Только в режиме атаки подсвечиваем карты защиты
+        if (gameMode === 'attack') {
+            setHoveredDefenseCard(index);
+        }
     };
 
     const handleDefenseCardLeave = () => {
         console.log(`🎯 Leave defense card`);
-        setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
     };
 
     const handleDefenseCardSlotHover = (attackIndex: number) => {
@@ -165,9 +165,14 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     };
 
     const resetGameState = () => {
-        setFactionCounter({});
-        setActiveFactions([]);
-        setActiveFirstAttackFactions([]);
+        // Сбрасываем глобальное состояние фракций
+        updateGame(prev => ({
+            ...prev,
+            factionCounter: {},
+            activeFirstAttackFactions: [],
+            usedDefenseCardFactions: {},
+            displayActiveFactions: []
+        }));
         setDefenseCards([]);
         setGameMode('attack');
         setShowGameInitialization(false);
@@ -325,10 +330,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             newState.attackerPasPressed = false;
             newState.coAttackerPasPressed = false;
             
-            // Сбрасываем локальные состояния
-            setFactionCounter({});
-            setActiveFactions([]);
-            setActiveFirstAttackFactions([]);
+            // Сбрасываем глобальное состояние фракций
+            newState.factionCounter = {};
+            newState.activeFirstAttackFactions = [];
+            newState.usedDefenseCardFactions = {};
+            newState.displayActiveFactions = [];
             setDefenseCards([]);
             
             console.log('✅ Ход завершен, карты перемещены в сброс');
@@ -651,7 +657,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
     // Функция для проверки, может ли карта защиты использовать фракцию
     const canDefenseCardUseFaction = (defenseCard: Card, factionId: number): boolean => {
-        const usedFactions = usedDefenseCardFactions[defenseCard.id] || [];
+        const usedFactions = game.usedDefenseCardFactions?.[defenseCard.id] || [];
         return !usedFactions.includes(factionId);
     };
 
@@ -713,15 +719,14 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
         if (game.slots?.every(slot => slot === null)) {
             // Первая карта - устанавливаем все её фракции как единицу
-            setActiveFirstAttackFactions(card.factions);
-            // Обновляем счётчик - фракции первой карты как единица
-            setFactionCounter(prev => {
-                const newCounter = { ...prev };
-                card.factions.forEach(factionId => {
-                    newCounter[factionId] = 1;
-                });
-                return newCounter;
-            });
+            updateGame(prev => ({
+                ...prev,
+                activeFirstAttackFactions: card.factions,
+                factionCounter: card.factions.reduce((acc, factionId) => {
+                    acc[factionId] = 1;
+                    return acc;
+                }, {} as Record<number, number>)
+            }));
             console.log(`🎯 Первая карта атаки - фракции установлены как единица:`, getFactionNames(card.factions));
             return;
         }
@@ -734,18 +739,20 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const intersection = getFactionIntersection(card.factions, firstAttackFactions);
         
         // Обновляем активные фракции первой карты - только пересекающиеся
-        setActiveFirstAttackFactions(intersection);
-        
-        // Обновляем счётчик только для ПЕРЕСЕКАЮЩИХСЯ фракций первой карты атаки
-        setFactionCounter(prev => {
+        updateGame(prev => {
             const newCounter: Record<number, number> = {};
             // Сохраняем только фракции из пересечения (не все фракции первой карты!)
             intersection.forEach(factionId => {
-                if (prev[factionId] && prev[factionId] > 0) {
-                    newCounter[factionId] = prev[factionId];
+                if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
+                    newCounter[factionId] = prev.factionCounter[factionId];
                 }
             });
-            return newCounter;
+            
+            return {
+                ...prev,
+                activeFirstAttackFactions: intersection,
+                factionCounter: newCounter
+            };
         });
         
         console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
@@ -763,12 +770,15 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const factionNames = getFactionNames(card.factions);
         
         // Обновляем счётчик
-        setFactionCounter(prev => {
-            const newCounter = { ...prev };
+        updateGame(prev => {
+            const newCounter = { ...prev.factionCounter };
             card.factions.forEach(factionId => {
                 newCounter[factionId] = (newCounter[factionId] || 0) + 1;
             });
-            return newCounter;
+            return {
+                ...prev,
+                factionCounter: newCounter
+            };
         });
         console.log(`🎯 Добавлены фракции защиты:`, factionNames);
         
@@ -821,24 +831,25 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         
         // Обновляем счётчик: оставляем только фракции первой карты атаки + пересечение
         const keepFactions = [...firstAttackFactions, ...intersection];
-        setFactionCounter(prev => {
+        
+        updateGame(prev => {
             const newCounter: Record<number, number> = {};
             keepFactions.forEach(factionId => {
-                if (prev[factionId] && prev[factionId] > 0) {
-                    newCounter[factionId] = prev[factionId];
+                if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
+                    newCounter[factionId] = prev.factionCounter[factionId];
                 }
             });
-            return newCounter;
+            
+            return {
+                ...prev,
+                factionCounter: newCounter,
+                activeFirstAttackFactions: firstAttackFactions,
+                usedDefenseCardFactions: {
+                    ...prev.usedDefenseCardFactions,
+                    [defenseCard.id]: [...(prev.usedDefenseCardFactions?.[defenseCard.id] || []), ...intersection]
+                }
+            };
         });
-        
-        // Обновляем активные фракции первой карты атаки
-        setActiveFirstAttackFactions(firstAttackFactions);
-        
-        // Отмечаем использованные фракции карты защиты
-        setUsedDefenseCardFactions(prev => ({
-            ...prev,
-            [defenseCard.id]: [...(prev[defenseCard.id] || []), ...intersection]
-        }));
         
         console.log(`🎯 Атакующая карта прикреплена через защитную. Фракции первой карты атаки: ${firstAttackFactionNames.join(', ')}, Пересечение: ${intersectionNames.join(', ')}`);
         
@@ -862,7 +873,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
         // Объединяем активные фракции с доступными фракциями защиты
         [...new Set([
-            ...activeFirstAttackFactions,
+            ...(game.activeFirstAttackFactions || []),
             ...allAvailableDefenseFactions
         ])];
 
@@ -870,7 +881,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const displayCounter: Record<number, number> = {};
         
         // Добавляем счетчики от карт атаки (фракции первой карты)
-        activeFirstAttackFactions.forEach(factionId => {
+        (game.activeFirstAttackFactions || []).forEach(factionId => {
             displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
         });
         
@@ -883,7 +894,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const newActiveFactions = Object.entries(displayCounter)
             .filter(([_, count]) => count > 0)
             .map(([factionId, count]) => `${getFactionNames([Number(factionId)])[0]} (${count})`);
-        setActiveFactions(newActiveFactions);
+        
+        // Обновляем глобальное состояние
+        updateGame(prev => ({
+            ...prev,
+            displayActiveFactions: newActiveFactions
+        }));
     };
 
 
@@ -894,12 +910,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         }
 
         // Проверяем, есть ли общие фракции с активными фракциями первой карты
-        if (activeFirstAttackFactions.length > 0) {
-            const hasCommon = hasCommonFactions(card.factions, activeFirstAttackFactions);
+        if (game.activeFirstAttackFactions && game.activeFirstAttackFactions.length > 0) {
+            const hasCommon = hasCommonFactions(card.factions, game.activeFirstAttackFactions);
             if (!hasCommon) {
                 return { 
                     isValid: false, 
-                    reason: `Карта должна иметь общие фракции с первой картой атаки: ${getFactionNames(activeFirstAttackFactions).join(', ')}` 
+                    reason: `Карта должна иметь общие фракции с первой картой атаки: ${getFactionNames(game.activeFirstAttackFactions).join(', ')}` 
                 };
             }
         }
@@ -1139,6 +1155,15 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
             newState.hands = { ...prev.hands, [myId]: myCards };
             newState.defenseSlots = defenseSlots;
+            
+            // Инициализируем usedDefenseCardFactions для новой карты защиты
+            if (!newState.usedDefenseCardFactions) {
+                newState.usedDefenseCardFactions = {};
+            }
+            if (!newState.usedDefenseCardFactions[defenseCard.id]) {
+                newState.usedDefenseCardFactions[defenseCard.id] = [];
+            }
+            
             return newState;
         });
 
@@ -1202,6 +1227,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             targetSelectionMode: false,
             factionEffects: {},
             activeFactions: [],
+            
+            // Faction management
+            factionCounter: {},
+            activeFirstAttackFactions: [],
+            usedDefenseCardFactions: {},
+            displayActiveFactions: [],
             
             // Card power system
             minCardPower: 50,
@@ -1473,7 +1504,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     }}
                                     onCardHover={handleDefenseCardHover}
                                     onCardLeave={handleDefenseCardLeave}
-                                    highlightedCardIndex={hoveredAttackCard}
+                                    highlightedCardIndex={gameMode === 'defense' ? hoveredAttackCard : null}
                                     gameMode={gameMode}
                                     invalidDefenseCard={null}
                                     onDefenseCardHover={handleDefenseCardSlotHover}

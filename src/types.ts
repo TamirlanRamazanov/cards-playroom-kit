@@ -47,6 +47,12 @@ export interface GameState {
     factionEffects: Record<number, string[]>; // faction -> list of effect descriptions
     activeFactions: number[]; // currently active factions on the table
     
+    // Faction management (moved from local state)
+    factionCounter: Record<number, number>; // faction -> count
+    activeFirstAttackFactions: number[]; // фракции первой карты атаки
+    usedDefenseCardFactions: Record<string, number[]>; // cardId -> used factionIds
+    displayActiveFactions: string[]; // отображаемые активные фракции для UI
+    
     // Card power system
     minCardPower: number; // минимальная сила карты (50)
     maxCardPower: number; // максимальная сила карты (100)

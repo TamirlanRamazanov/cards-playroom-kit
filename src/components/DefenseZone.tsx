@@ -212,7 +212,7 @@ const DefenseCardDropZone: React.FC<{
                         isDefenseHighlighted={
                             (playerRole === 'attacker' || playerRole === 'co-attacker') 
                                 ? highlightedDefenseCardIndex === attackIndex
-                                : highlightedCardIndex === attackIndex
+                                : (gameMode === 'defense' && highlightedCardIndex === attackIndex)
                         }
                         disableMouseEvents={false} // Включаем события мыши для всех ролей
                     />
@@ -240,7 +240,7 @@ const DefenseCardDropZone: React.FC<{
                                 if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
                                     return "2px solid #32CD32"; // Зеленый для подсветки атакующими
                                 }
-                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                if (playerRole === 'defender' && gameMode === 'defense' && highlightedCardIndex === attackIndex) {
                                     return "2px solid #32CD32"; // Зеленый для подсветки защитником
                                 }
                                 return "2px dashed rgba(65, 105, 225, 0.3)";
@@ -254,7 +254,7 @@ const DefenseCardDropZone: React.FC<{
                                 if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
                                     return "#32CD32"; // Зеленый для подсветки атакующими
                                 }
-                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                if (playerRole === 'defender' && gameMode === 'defense' && highlightedCardIndex === attackIndex) {
                                     return "#32CD32"; // Зеленый для подсветки защитником
                                 }
                                 return "rgba(65, 105, 225, 0.5)";
@@ -265,7 +265,7 @@ const DefenseCardDropZone: React.FC<{
                                 if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
                                     return "rgba(50, 205, 50, 0.1)"; // Светло-зеленый фон для подсветки атакующими
                                 }
-                                if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
+                                if (playerRole === 'defender' && gameMode === 'defense' && highlightedCardIndex === attackIndex) {
                                     return "rgba(50, 205, 50, 0.1)"; // Светло-зеленый фон для подсветки защитником
                                 }
                                 return "rgba(65, 105, 225, 0.05)";

@@ -60,6 +60,16 @@ const GameHUD: React.FC<GameHUDProps> = ({
                     <div style={{ fontSize: "14px", opacity: 0.8 }}>
                         Игроков: {playerCount} | Карт в руке: {myHand.length}
                     </div>
+                    {game.displayActiveFactions && game.displayActiveFactions.length > 0 && (
+                        <div style={{ 
+                            fontSize: "12px", 
+                            opacity: 0.9,
+                            color: "#A78BFA",
+                            fontWeight: "bold"
+                        }}>
+                            🎯 Активные фракции: {game.displayActiveFactions.join(', ')}
+                        </div>
+                    )}
                 </div>
                 <button
                     style={{

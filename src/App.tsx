@@ -175,6 +175,12 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
         factionEffects: {},
         activeFactions: [],
         
+        // Faction management
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        
         // Card power system
         minCardPower: 50,
         maxCardPower: 100,
@@ -226,6 +232,12 @@ export default function App() {
         selectedTarget: undefined,
         factionEffects: {},
         activeFactions: [],
+        
+        // Faction management
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
         // Card power system (align with GameState)
         minCardPower: 50,
         maxCardPower: 100,
