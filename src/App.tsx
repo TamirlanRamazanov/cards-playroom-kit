@@ -180,6 +180,7 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
         activeFirstAttackFactions: [],
         usedDefenseCardFactions: {},
         displayActiveFactions: [],
+        defenseFactionsBuffer: {},
         
         // Card power system
         minCardPower: 50,
@@ -238,6 +239,7 @@ export default function App() {
         activeFirstAttackFactions: [],
         usedDefenseCardFactions: {},
         displayActiveFactions: [],
+        defenseFactionsBuffer: {},
         // Card power system (align with GameState)
         minCardPower: 50,
         maxCardPower: 100,

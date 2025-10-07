@@ -52,6 +52,7 @@ export interface GameState {
     activeFirstAttackFactions: number[]; // фракции первой карты атаки
     usedDefenseCardFactions: Record<string, number[]>; // cardId -> used factionIds
     displayActiveFactions: string[]; // отображаемые активные фракции для UI
+    defenseFactionsBuffer: Record<number, number>; // буфер фракций защиты
     
     // Card power system
     minCardPower: number; // минимальная сила карты (50)

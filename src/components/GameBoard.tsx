@@ -689,7 +689,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             }
         });
         
-        // setDefenseFactionsBuffer(newBuffer);
+        // Сохраняем в глобальное состояние
+        updateGame(prev => ({
+            ...prev,
+            defenseFactionsBuffer: newBuffer
+        }));
+        
         console.log(`🎯 Сохранены фракции защиты в буфер:`, Object.keys(newBuffer).map(id => `${FACTIONS[parseInt(id)]}(${newBuffer[parseInt(id)]})`));
         return newBuffer;
     };
@@ -746,6 +751,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
                     newCounter[factionId] = prev.factionCounter[factionId];
                 }
+            });
+            
+            // Восстанавливаем фракции защиты из буфера
+            const defenseBuffer = prev.defenseFactionsBuffer || {};
+            Object.keys(defenseBuffer).forEach(factionIdStr => {
+                const factionId = parseInt(factionIdStr);
+                newCounter[factionId] = defenseBuffer[factionId];
             });
             
             return {
@@ -877,18 +889,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             ...allAvailableDefenseFactions
         ])];
 
-        // Создаем счетчик для отображения
-        const displayCounter: Record<number, number> = {};
-        
-        // Добавляем счетчики от карт атаки (фракции первой карты)
-        (game.activeFirstAttackFactions || []).forEach(factionId => {
-            displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
-        });
-        
-        // Добавляем счетчики от карт защиты
-        allAvailableDefenseFactions.forEach(factionId => {
-            displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
-        });
+        // Используем глобальный счетчик фракций
+        const displayCounter: Record<number, number> = { ...game.factionCounter };
 
         // Обновляем отображаемые активные фракции
         const newActiveFactions = Object.entries(displayCounter)
@@ -1233,6 +1235,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             activeFirstAttackFactions: [],
             usedDefenseCardFactions: {},
             displayActiveFactions: [],
+            defenseFactionsBuffer: {},
             
             // Card power system
             minCardPower: 50,
