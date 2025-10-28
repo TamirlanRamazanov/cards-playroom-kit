@@ -801,61 +801,61 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // };
 
     // Функции для работы с фракционной системой
-    const updateActiveFactionsFromAttackCard = (card: Card) => {
-        // Проверяем, заполнен ли див атаки (6 карт)
-        const attackCardsCount = game.slots?.filter(slot => slot !== null).length || 0;
-        if (attackCardsCount >= 6) {
-            console.log(`🚫 Див атаки заполнен (${attackCardsCount}/6), блокируем изменение фракций`);
-            return;
-        }
+    // const updateActiveFactionsFromAttackCard = (card: Card) => {
+    //     // Проверяем, заполнен ли див атаки (6 карт)
+    //     const attackCardsCount = game.slots?.filter(slot => slot !== null).length || 0;
+    //     if (attackCardsCount >= 6) {
+    //         console.log(`🚫 Див атаки заполнен (${attackCardsCount}/6), блокируем изменение фракций`);
+    //         return;
+    //     }
 
-        if (game.slots?.every(slot => slot === null)) {
-            // Первая карта - устанавливаем все её фракции как единицу
-            updateGame(prev => ({
-                ...prev,
-                activeFirstAttackFactions: card.factions,
-                factionCounter: card.factions.reduce((acc, factionId) => {
-                    acc[factionId] = 1;
-                    return acc;
-                }, {} as Record<number, number>)
-            }));
-            console.log(`🎯 Первая карта атаки - фракции установлены как единица:`, getFactionNames(card.factions));
-            return;
-        }
+    //     if (game.slots?.every(slot => slot === null)) {
+    //         // Первая карта - устанавливаем все её фракции как единицу
+    //         updateGame(prev => ({
+    //             ...prev,
+    //             activeFirstAttackFactions: card.factions,
+    //             factionCounter: card.factions.reduce((acc, factionId) => {
+    //                 acc[factionId] = 1;
+    //                 return acc;
+    //             }, {} as Record<number, number>)
+    //         }));
+    //         console.log(`🎯 Первая карта атаки - фракции установлены как единицу:`, getFactionNames(card.factions));
+    //         return;
+    //     }
 
-        // Для последующих карт - сохраняем фракции защиты в буфер
-        saveDefenseFactionsToBuffer(factionCounter);
+    //     // Для последующих карт - сохраняем фракции защиты в буфер
+    //     saveDefenseFactionsToBuffer(factionCounter);
 
-        // Пересечение с фракциями первой карты атаки
-        const firstAttackFactions = getFirstAttackCardFactions();
-        const intersection = getFactionIntersection(card.factions, firstAttackFactions);
+    //     // Пересечение с фракциями первой карты атаки
+    //     const firstAttackFactions = getFirstAttackCardFactions();
+    //     const intersection = getFactionIntersection(card.factions, firstAttackFactions);
         
-        // Обновляем активные фракции первой карты - только пересекающиеся
-        updateGame(prev => {
-            const newCounter: Record<number, number> = {};
-            // Сохраняем только фракции из пересечения (не все фракции первой карты!)
-            intersection.forEach(factionId => {
-                if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
-                    newCounter[factionId] = prev.factionCounter[factionId];
-                }
-            });
+    //     // Обновляем активные фракции первой карты - только пересекающиеся
+    //     updateGame(prev => {
+    //         const newCounter: Record<number, number> = {};
+    //         // Сохраняем только фракции из пересечения (не все фракции первой карты!)
+    //         intersection.forEach(factionId => {
+    //             if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
+    //                 newCounter[factionId] = prev.factionCounter[factionId];
+    //             }
+    //         });
             
-            // Восстанавливаем фракции защиты из буфера
-            const defenseBuffer = prev.defenseFactionsBuffer || {};
-            Object.keys(defenseBuffer).forEach(factionIdStr => {
-                const factionId = parseInt(factionIdStr);
-                newCounter[factionId] = defenseBuffer[factionId];
-            });
+    //         // Восстанавливаем фракции защиты из буфера
+    //         const defenseBuffer = prev.defenseFactionsBuffer || {};
+    //         Object.keys(defenseBuffer).forEach(factionIdStr => {
+    //             const factionId = parseInt(factionIdStr);
+    //             newCounter[factionId] = defenseBuffer[factionId];
+    //         });
             
-            return {
-                ...prev,
-                activeFirstAttackFactions: intersection,
-                factionCounter: newCounter
-            };
-        });
+    //         return {
+    //             ...prev,
+    //             activeFirstAttackFactions: intersection,
+    //             factionCounter: newCounter
+    //         };
+    //     });
         
-        console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
-    };
+    //     console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
+    // };
 
     const updateActiveFactionsFromDefenseCard = (card: Card) => {
         // Проверяем, заполнен ли див атаки (6 карт)
@@ -1097,7 +1097,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             const freeSlotIndex = game.slots?.findIndex(slot => slot === null) ?? -1;
             
             if (freeSlotIndex >= 0) {
-                console.log('🎯 Добавляем карту в слот', freeSlotIndex);
+                console.log('🎯 Добавляем карту в слот через защитную карту', freeSlotIndex);
                 
                 updateGame((prev) => {
             const myCards = [...(prev.hands[myId] || [])];
@@ -1115,11 +1115,48 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
-                        console.log('🎯 Главный атакующий подкинул карту');
+                        console.log('🎯 Главный атакующий подкинул карту через защитную карту');
                     }
-
-                    // Обновляем фракции после добавления карты
-                    updateActiveFactionsFromAttackCard(cardData.card);
+                    
+                    // Обновляем фракции (обрабатываем логику внутри updateGame для атомарности)
+                    const attackCardsCount = slots.filter(slot => slot !== null).length;
+                    console.log(`🎯 Количество карт атаки после добавления через защиту: ${attackCardsCount}`);
+                    
+                    if (attackCardsCount === 1) {
+                        // Первая карта - устанавливаем все её фракции
+                        newState.activeFirstAttackFactions = cardData.card.factions;
+                        newState.factionCounter = cardData.card.factions.reduce((acc, factionId) => {
+                            acc[factionId] = 1;
+                            return acc;
+                        }, {} as Record<number, number>);
+                        console.log(`🎯 Первая карта атаки через защиту - фракции установлены:`, getFactionNames(cardData.card.factions));
+                    } else if (attackCardsCount < 6) {
+                        // Сохраняем фракции защиты в буфер
+                        const defenseBuffer = { ...prev.factionCounter };
+                        
+                        // Пересечение с фракциями первой карты атаки
+                        const firstAttackFactions = prev.activeFirstAttackFactions || [];
+                        const intersection = getFactionIntersection(cardData.card.factions, firstAttackFactions);
+                        
+                        const newCounter: Record<number, number> = {};
+                        // Сохраняем только фракции из пересечения
+                        intersection.forEach(factionId => {
+                            if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
+                                newCounter[factionId] = prev.factionCounter[factionId];
+                            }
+                        });
+                        
+                        // Восстанавливаем фракции защиты из буфера
+                        Object.keys(prev.defenseFactionsBuffer || {}).forEach(factionIdStr => {
+                            const factionId = parseInt(factionIdStr);
+                            newCounter[factionId] = (prev.defenseFactionsBuffer || {})[factionId];
+                        });
+                        
+                        newState.activeFirstAttackFactions = intersection;
+                        newState.factionCounter = newCounter;
+                        newState.defenseFactionsBuffer = defenseBuffer;
+                        console.log(`🎯 Карта атаки через защиту добавлена - обновлены фракции`);
+                    }
 
                     // Добавляем игрока в очередь добора
                     addToDrawQueue(myId, false);
@@ -1184,9 +1221,46 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         newState.mainAttackerHasPlayed = true;
                         console.log('🎯 Главный атакующий подкинул карту');
                     }
-
-                    // Обновляем фракции после добавления карты
-                    updateActiveFactionsFromAttackCard(cardData.card);
+                    
+                    // Обновляем фракции (обрабатываем логику внутри updateGame для атомарности)
+                    const attackCardsCount = slots.filter(slot => slot !== null).length;
+                    console.log(`🎯 Количество карт атаки после добавления: ${attackCardsCount}`);
+                    
+                    if (attackCardsCount === 1) {
+                        // Первая карта - устанавливаем все её фракции
+                        newState.activeFirstAttackFactions = cardData.card.factions;
+                        newState.factionCounter = cardData.card.factions.reduce((acc, factionId) => {
+                            acc[factionId] = 1;
+                            return acc;
+                        }, {} as Record<number, number>);
+                        console.log(`🎯 Первая карта атаки - фракции установлены:`, getFactionNames(cardData.card.factions));
+                    } else if (attackCardsCount < 6) {
+                        // Сохраняем фракции защиты в буфер
+                        const defenseBuffer = { ...prev.factionCounter };
+                        
+                        // Пересечение с фракциями первой карты атаки
+                        const firstAttackFactions = prev.activeFirstAttackFactions || [];
+                        const intersection = getFactionIntersection(cardData.card.factions, firstAttackFactions);
+                        
+                        const newCounter: Record<number, number> = {};
+                        // Сохраняем только фракции из пересечения
+                        intersection.forEach(factionId => {
+                            if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
+                                newCounter[factionId] = prev.factionCounter[factionId];
+                            }
+                        });
+                        
+                        // Восстанавливаем фракции защиты из буфера
+                        Object.keys(prev.defenseFactionsBuffer || {}).forEach(factionIdStr => {
+                            const factionId = parseInt(factionIdStr);
+                            newCounter[factionId] = (prev.defenseFactionsBuffer || {})[factionId];
+                        });
+                        
+                        newState.activeFirstAttackFactions = intersection;
+                        newState.factionCounter = newCounter;
+                        newState.defenseFactionsBuffer = defenseBuffer;
+                        console.log(`🎯 Карта атаки добавлена - обновлены фракции`);
+                    }
 
                     // Добавляем игрока в очередь добора
                     addToDrawQueue(myId, false);
