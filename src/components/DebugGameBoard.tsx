@@ -114,8 +114,15 @@ const createBasicGameState = (seed: number = 42, playerCount: number = 4): GameS
     // Draw queue
     drawQueue: [],
     
-    // Game initialization
-    gameInitialized: false,
+        // Game initialization
+        gameInitialized: false,
+        
+        // Faction management (added for type compatibility)
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        defenseFactionsBuffer: {},
     
     // Turn control system
     turnActions: {

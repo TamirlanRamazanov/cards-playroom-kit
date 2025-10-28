@@ -124,6 +124,13 @@ const createBasicGameState = (seed: number = 42): GameState => {
         // Game initialization
         gameInitialized: false,
         
+        // Faction management (added for type compatibility)
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        defenseFactionsBuffer: {},
+        
         // Turn control system
         turnActions: {
             canEndTurn: true,
