@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { insertCoin, myPlayer, useMultiplayerState } from "playroomkit";
 import type { GameState } from "./types";
 import GameBoard from "./components/GameBoard";
@@ -272,8 +272,21 @@ export default function App() {
     const myId = useMyId(ready);
 
     // setGame НЕ принимает функцию-апдейтер — всегда отдаём готовое значение
+    // Используем useRef для хранения актуального значения game
+    const gameRef = React.useRef(game);
+    React.useEffect(() => {
+        gameRef.current = game;
+    }, [game]);
+    
     const updateGame = (fn: (prev: GameState) => GameState) => {
-        setGame(fn(game));
+        const newState = fn(gameRef.current);
+        console.log('🔄 updateGame вызван:', { 
+            oldSlots: gameRef.current.slots?.length || 0, 
+            newSlots: newState.slots?.length || 0,
+            oldHand: gameRef.current.hands[myId]?.length || 0,
+            newHand: newState.hands[myId]?.length || 0
+        });
+        setGame(newState);
     };
 
     const enter = async () => {

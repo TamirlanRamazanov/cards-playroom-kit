@@ -1162,8 +1162,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         console.log(`🎯 Карта атаки через защиту добавлена - обновлены фракции`);
                     }
 
-                    // Добавляем игрока в очередь добора
-                    addToDrawQueue(myId, false);
+                    // Добавляем игрока в очередь добора (внутри того же updateGame)
+                    const currentQueue = [...(prev.drawQueue || [])];
+                    currentQueue.unshift(myId);
+                    newState.drawQueue = currentQueue;
+                    console.log(`🎯 Игрок ${myId} добавлен в очередь добора: ${currentQueue.join(', ')}`);
 
                     return tryDeclareWinner(newState);
                 });
@@ -1278,8 +1281,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         console.log(`🎯 Карта атаки добавлена - обновлены фракции`);
                     }
 
-                    // Добавляем игрока в очередь добора
-                    addToDrawQueue(myId, false);
+                    // Добавляем игрока в очередь добора (внутри того же updateGame)
+                    const currentQueue = [...(prev.drawQueue || [])];
+                    currentQueue.unshift(myId);
+                    newState.drawQueue = currentQueue;
+                    console.log(`🎯 Игрок ${myId} добавлен в очередь добора: ${currentQueue.join(', ')}`);
 
                     return tryDeclareWinner(newState);
                 });
