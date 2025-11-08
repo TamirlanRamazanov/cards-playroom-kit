@@ -1049,18 +1049,20 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             return;
         }
 
-        setActiveCard(null);
-        setHoveredAttackCard(null);
-        setHoveredDefenseCard(null);
-
         if (!over) {
             console.log('❌ Нет цели для drop');
+            setActiveCard(null);
+            setHoveredAttackCard(null);
+            setHoveredDefenseCard(null);
             return;
         }
 
         const cardData = active.data.current as { card: Card; index: number; source: string };
         if (!cardData) {
             console.log('❌ Нет данных карты');
+            setActiveCard(null);
+            setHoveredAttackCard(null);
+            setHoveredDefenseCard(null);
             return;
         }
 
@@ -1082,6 +1084,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             
             if (!defenseCard) {
                 console.log('❌ Карта защиты не найдена');
+                setActiveCard(null);
+                setHoveredDefenseCard(null);
                 return;
             }
             
@@ -1163,9 +1167,15 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
                     return tryDeclareWinner(newState);
                 });
+                
+                // Сбрасываем состояние после успешного размещения
+                setActiveCard(null);
+                setHoveredDefenseCard(null);
             } else {
                 console.log('❌ Нет свободных слотов');
                 alert('❌ Нет свободных слотов на столе!');
+                setActiveCard(null);
+                setHoveredDefenseCard(null);
             }
             return;
         }
@@ -1183,8 +1193,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Добавляем карту защиты над выбранной картой атаки (в одном атомарном апдейте внутри addDefenseCard)
                     addDefenseCard(targetIndex, cardData.card, cardData.index);
+                    setActiveCard(null);
+                    setHoveredAttackCard(null);
                 } else {
                     alert('🛡️ Нет карт атаки для отбивания!');
+                    setActiveCard(null);
+                    setHoveredAttackCard(null);
                 }
                 return;
             }
@@ -1194,6 +1208,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             if (!validation.isValid) {
                 console.log('❌ Карта не прошла валидацию:', validation.reason);
                 alert(validation.reason);
+                setActiveCard(null);
+                setHoveredAttackCard(null);
                 return;
             }
 
@@ -1269,11 +1285,21 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 });
                 
                 console.log('✅ Карта успешно добавлена!');
+                // Сбрасываем состояние после успешного размещения
+                setActiveCard(null);
+                setHoveredAttackCard(null);
             } else {
                 console.log('❌ Нет свободных слотов');
                 alert('🃏 Стол полон! Максимум 6 карт.');
+                setActiveCard(null);
+                setHoveredAttackCard(null);
             }
         }
+        
+        // Сбрасываем состояние в конце функции на случай, если не было обработано
+        setActiveCard(null);
+        setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
     };
 
     const addDefenseCard = (attackCardIndex: number, defenseCard: Card, handIndex?: number): boolean => {

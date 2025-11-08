@@ -27,3 +27,7 @@ dist-ssr
 *.py
 requirements.txt
 *.png
+
+# CSV and SQL files (not related to the project)
+*.csv
+*.sql
