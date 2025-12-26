@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { insertCoin, myPlayer, useMultiplayerState } from "playroomkit";
 import type { GameState } from "./types";
 import GameBoard from "./components/GameBoard";
@@ -6,8 +6,9 @@ import MainMenu from "./components/MainMenu";
 import DebugGameBoard from "./components/DebugGameBoard";
 // import DebugGameBoardV2 from "./components/DebugGameBoardV2";
 import { CARDS_DATA } from "./engine/cards";
+import { useGameStore } from "./store/gameStore";
 
-// myId станет доступен после insertCoin()
+// myId станет доступен после startNewPlay()
 function useMyId(ready: boolean): string {
     const [id, setId] = useState("");
     useEffect(() => {
@@ -175,13 +176,6 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
         factionEffects: {},
         activeFactions: [],
         
-        // Faction management
-        factionCounter: {},
-        activeFirstAttackFactions: [],
-        usedDefenseCardFactions: {},
-        displayActiveFactions: [],
-        defenseFactionsBuffer: {},
-        
         // Card power system
         minCardPower: 50,
         maxCardPower: 100,
@@ -210,7 +204,11 @@ export default function App() {
     const [name, setName] = useState("");
     const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "debug">("mainMenu");
 
-    const [game, setGame] = useMultiplayerState<GameState>("game", {
+    // Zustand store
+    const { game: zustandGame, setGame: setZustandGame, updateGame: updateZustandGame } = useGameStore();
+
+    // PlayroomKit multiplayer state для синхронизации между клиентами
+    const [playroomGame, setPlayroomGame] = useMultiplayerState<GameState>("game", {
         phase: "lobby",
         hostId: undefined,
         players: {},
@@ -233,13 +231,6 @@ export default function App() {
         selectedTarget: undefined,
         factionEffects: {},
         activeFactions: [],
-        
-        // Faction management
-        factionCounter: {},
-        activeFirstAttackFactions: [],
-        usedDefenseCardFactions: {},
-        displayActiveFactions: [],
-        defenseFactionsBuffer: {},
         // Card power system (align with GameState)
         minCardPower: 50,
         maxCardPower: 100,
@@ -271,29 +262,47 @@ export default function App() {
 
     const myId = useMyId(ready);
 
-    // setGame НЕ принимает функцию-апдейтер — всегда отдаём готовое значение
-    // Используем useRef для хранения актуального значения game
-    const gameRef = React.useRef(game);
-    React.useEffect(() => {
-        gameRef.current = game;
-    }, [game]);
-    
+    // Ref для отслеживания последнего состояния, чтобы избежать циклов
+    const lastPlayroomStateRef = useRef<string>('');
+
+    // Синхронизация PlayroomKit -> Zustand: обновляем Zustand когда PlayroomKit меняется
+    // Это источник истины для мультиплеера
+    useEffect(() => {
+        if (!playroomGame) return;
+
+        // Проверяем, действительно ли состояние изменилось
+        const currentStateStr = JSON.stringify(playroomGame);
+        
+        // Обновляем Zustand только если PlayroomKit действительно изменился
+        // Это предотвращает циклы, но позволяет синхронизировать изменения от других игроков
+        if (currentStateStr !== lastPlayroomStateRef.current) {
+            console.log('🔄 Синхронизация PlayroomKit -> Zustand');
+            lastPlayroomStateRef.current = currentStateStr;
+            setZustandGame(playroomGame);
+        }
+    }, [playroomGame, setZustandGame]);
+
+    // Синхронизация Zustand -> PlayroomKit: обновляем PlayroomKit через updateGame
+    // Используем updateGame для атомарных обновлений
     const updateGame = (fn: (prev: GameState) => GameState) => {
-        const newState = fn(gameRef.current);
-        console.log('🔄 updateGame вызван:', { 
-            oldPhase: gameRef.current.phase,
-            newPhase: newState.phase,
-            oldSlots: gameRef.current.slots?.length || 0, 
-            newSlots: newState.slots?.length || 0,
-            oldHand: gameRef.current.hands[myId]?.length || 0,
-            newHand: newState.hands[myId]?.length || 0,
-            currentPage: currentPage
+        updateZustandGame((prev) => {
+            const newState = fn(prev);
+            const newStateStr = JSON.stringify(newState);
+            const prevStateStr = JSON.stringify(prev);
+            
+            // Обновляем PlayroomKit только если состояние действительно изменилось
+            if (newStateStr !== prevStateStr) {
+                console.log('🔄 Синхронизация Zustand -> PlayroomKit');
+                lastPlayroomStateRef.current = newStateStr;
+                // Синхронизируем с PlayroomKit (это обновит всех клиентов)
+                setPlayroomGame(newState);
+            }
+            
+            return newState;
         });
-        setGame(newState);
-        // gameRef обновится автоматически через useEffect когда game изменится
     };
 
-    const enter = async () => {
+    const startNewPlay = async () => {
         await insertCoin();
         setReady(true);
         setCurrentPage("game");
@@ -364,7 +373,7 @@ export default function App() {
                         }}
                     />
                     <button
-                        onClick={enter}
+                        onClick={startNewPlay}
                         disabled={!name}
                         style={{
                             width: "100%",
@@ -376,7 +385,7 @@ export default function App() {
                             cursor: name ? "pointer" : "not-allowed",
                         }}
                     >
-                        Войти в лобби
+                        New Play
                     </button>
                 </div>
             </div>
@@ -388,73 +397,53 @@ export default function App() {
         return <DebugGameBoard onBack={handleBackToMainMenu} />;
     }
 
-    // Отображаем игру (лобби или игровую доску) только если currentPage === "game"
-    if (currentPage === "game") {
-        if (game.phase === "lobby") {
-            return (
-                <div
-                    style={{
-                        width: "100vw",
-                        height: "100vh",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "#0b1020",
-                        color: "#fff",
-                    }}
-                >
-                    <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
-                        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Лобби</h1>
-                        <div style={{ marginBottom: 12 }}>
-                            Игроки: {Object.values(game.players || {}).map((p) => p.name).join(", ")}
-                        </div>
-                        {myId === game.hostId && (
-                            <button
-                                onClick={() => {
-                                    console.log('🎮 Начало игры - текущий phase:', game.phase);
-                                    console.log('🎮 gameRef.current.phase:', gameRef.current.phase);
-                                    updateGame((prev) => {
-                                        console.log('🎮 updateGame - prev.phase:', prev.phase);
-                                        const newState = createGameWithDeck(prev);
-                                        console.log('🎮 updateGame - newState.phase:', newState.phase);
-                                        return newState;
-                                    });
-                                }}
-                                style={{
-                                    width: "100%",
-                                    padding: 10,
-                                    borderRadius: 10,
-                                    border: 0,
-                                    background: "#10b981",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Начать игру
-                            </button>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        // Отображаем игровую доску
+    // Отображаем игру (лобби или игровую доску)
+    if (zustandGame.phase === "lobby") {
         return (
-            <GameBoard
-                myId={myId}
-                game={game}
-                updateGame={updateGame}
-            />
+            <div
+                style={{
+                    width: "100vw",
+                    height: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#0b1020",
+                    color: "#fff",
+                }}
+            >
+                <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
+                    <h1 style={{ fontSize: 20, marginBottom: 8 }}>Лобби</h1>
+                    <div style={{ marginBottom: 12 }}>
+                        Игроки: {Object.values(zustandGame.players || {}).map((p) => p.name).join(", ")}
+                    </div>
+                    {myId === zustandGame.hostId && (
+                        <button
+                            onClick={() => {
+                                updateGame((prev) => createGameWithDeck(prev));
+                            }}
+                            style={{
+                                width: "100%",
+                                padding: 10,
+                                borderRadius: 10,
+                                border: 0,
+                                background: "#10b981",
+                                color: "#fff",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Начать игру
+                        </button>
+                    )}
+                </div>
+            </div>
         );
     }
 
-    // Если currentPage не "game", но game.phase === "playing", это ошибка состояния
-    // Возвращаемся в главное меню
-    if (game.phase === "playing" && currentPage !== "game") {
-        console.warn('⚠️ Несоответствие состояния: game.phase === "playing", но currentPage !== "game"');
-        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} onDebugGameV2={() => setCurrentPage("debug")} />;
-    }
-
-    // Fallback - возвращаемся в главное меню
-    return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} onDebugGameV2={() => setCurrentPage("debug")} />;
+    // Отображаем игровую доску
+    return (
+        <GameBoard
+            myId={myId}
+            updateGame={updateGame}
+        />
+    );
 }

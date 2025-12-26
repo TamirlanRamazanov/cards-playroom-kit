@@ -7,14 +7,20 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import DropZone from "./DropZone";
 import DefenseZone from "./DefenseZone";
 import { FACTIONS } from "../engine/cards";
+import { useGameStore } from "../store/gameStore";
 
 interface Props {
     myId: string;
-    game: GameState;
-    updateGame: (updater: (prev: GameState) => GameState) => void;
+    updateGame?: (fn: (prev: GameState) => GameState) => void;
 }
 
-export default function GameBoard({ myId, game, updateGame }: Props) {
+export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
+    // Используем Zustand store для чтения состояния
+    const { game } = useGameStore();
+    
+    // Используем updateGame из props, если передан, иначе из Zustand
+    // Props версия синхронизируется с PlayroomKit через App.tsx
+    const updateGame = updateGameProp || useGameStore.getState().updateGame;
     // Inline styles as fallback for Vercel compatibility
     const gameButtonStyle = {
         borderRadius: '4px',
@@ -43,10 +49,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     
     // Состояния для игровой логики
     const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
+    const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     
-    // Используем глобальное состояние для фракций
-    const factionCounter = game.factionCounter || {};
-    const activeFactions = game.displayActiveFactions || [];
+    // Состояния для фракционной системы
+    const [factionCounter, setFactionCounter] = useState<Record<number, number>>({});
+    const [activeFactions, setActiveFactions] = useState<string[]>([]);
+    // const [defenseFactionsBuffer, setDefenseFactionsBuffer] = useState<Record<number, number>>({});
+    const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
     
     // Состояния для системы инициализации
     const [showGameInitialization, setShowGameInitialization] = useState<boolean>(false);
@@ -66,7 +75,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // useEffect для обновления отображения активных фракций
     useEffect(() => {
         updateActiveFactionsDisplay();
-    }, [game.slots, game.defenseSlots, game.activeFirstAttackFactions, game.usedDefenseCardFactions]);
+    }, [game.slots, game.defenseSlots, activeFirstAttackFactions, usedDefenseCardFactions]);
 
     // Глобальный обработчик мыши для отслеживания позиции курсора
     useEffect(() => {
@@ -111,15 +120,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
     const handleDefenseCardHover = (index: number) => {
         console.log(`🎯 Hover defense card: ${index}`);
-        // Только в режиме атаки подсвечиваем карты защиты
-        if (gameMode === 'attack') {
-            setHoveredDefenseCard(index);
-        }
+        setHoveredAttackCard(index);
     };
 
     const handleDefenseCardLeave = () => {
         console.log(`🎯 Leave defense card`);
-        setHoveredDefenseCard(null);
+        setHoveredAttackCard(null);
     };
 
     const handleDefenseCardSlotHover = (attackIndex: number) => {
@@ -165,14 +171,9 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     };
 
     const resetGameState = () => {
-        // Сбрасываем глобальное состояние фракций
-        updateGame(prev => ({
-            ...prev,
-            factionCounter: {},
-            activeFirstAttackFactions: [],
-            usedDefenseCardFactions: {},
-            displayActiveFactions: []
-        }));
+        setFactionCounter({});
+        setActiveFactions([]);
+        setActiveFirstAttackFactions([]);
         setDefenseCards([]);
         setGameMode('attack');
         setShowGameInitialization(false);
@@ -330,11 +331,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             newState.attackerPasPressed = false;
             newState.coAttackerPasPressed = false;
             
-            // Сбрасываем глобальное состояние фракций
-            newState.factionCounter = {};
-            newState.activeFirstAttackFactions = [];
-            newState.usedDefenseCardFactions = {};
-            newState.displayActiveFactions = [];
+            // Сбрасываем локальные состояния
+            setFactionCounter({});
+            setActiveFactions([]);
+            setActiveFirstAttackFactions([]);
             setDefenseCards([]);
             
             console.log('✅ Ход завершен, карты перемещены в сброс');
@@ -433,102 +433,161 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         });
     };
 
-    const rotateRolesAfterTakeCards = () => {
-        console.log('🎯 Смена ролей после взятия карт защитником');
-        
+    // Функция для взятия карт защитником
+    const handleTakeCards = () => {
+        const role = getCurrentPlayerRole();
+        if (role !== 'defender') {
+            console.log('❌ Только защитник может взять карты');
+            return;
+        }
+
+        console.log('🎯 Взятие карт: переносим все карты со стола в руку');
+
+        // Собираем все карты со стола (атаки и защиты)
+        const attackCards = game.slots?.filter(card => card !== null) || [];
+        const defenseCardsFromTable = (game.defenseSlots || []).filter(card => card !== null);
+        const allTableCards = [...attackCards, ...defenseCardsFromTable];
+
+        console.log(`📦 Карты для взятия: ${allTableCards.length} карт`);
+        console.log('🃏 Карты атаки:', attackCards.map(card => card.name));
+        console.log('🛡️ Карты защиты:', defenseCardsFromTable.map(card => card.name));
+
+        if (allTableCards.length === 0) {
+            console.log('⚠️ На столе нет карт для взятия');
+            alert('⚠️ На столе нет карт для взятия');
+            return;
+        }
+
+        // Атомарно обновляем состояние игры: добавляем карты в руку, очищаем стол, сбрасываем состояния, меняем роли, обрабатываем очередь добора
         updateGame((prev) => {
             const newState = { ...prev };
+            const myCards = [...(prev.hands[myId] || [])];
+            const newHand = [...myCards, ...allTableCards];
+
+            console.log(`✅ Карты добавлены в руку. Было: ${myCards.length}, стало: ${newHand.length}`);
+
+            // Обновляем руку защитника
+            newState.hands = {
+                ...prev.hands,
+                [myId]: newHand
+            };
+
+            // Очищаем стол
+            newState.slots = new Array(6).fill(null);
+            newState.defenseSlots = new Array(6).fill(null);
+
+            // Сбрасываем состояния кнопок и приоритетов
+            newState.attackPriority = 'attacker';
+            newState.mainAttackerHasPlayed = false;
+            newState.attackerPassed = false;
+            newState.coAttackerPassed = false;
+            newState.attackerBitoPressed = false;
+            newState.coAttackerBitoPressed = false;
+            newState.attackerPasPressed = false;
+            newState.coAttackerPasPressed = false;
+
+            // Меняем роли после взятия карт (встроенная логика)
             const playerIds = Object.keys(prev.players || {});
             const playerCount = playerIds.length;
+            const currentRoles = { ...prev.playerRoles };
+            const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
             
             if (playerCount === 2) {
                 // 2 игрока: роли не меняются
                 console.log('🎯 2 игрока - роли не меняются');
             } else if (playerCount === 3) {
-                // 3 игрока: роли сдвигаются на 1 назад
-                const currentRoles = { ...prev.playerRoles };
-                const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
+                // 3 игрока: со-атакующий → главный атакующий, главный → защитник, защитник → со-атакующий
+                const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+                const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+                const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
                 
-                playerIds.forEach((playerId) => {
-                    const currentRole = currentRoles[playerId];
-                    let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
-                    
-                    if (currentRole === 'attacker') {
-                        newRole = 'co-attacker';
-                    } else if (currentRole === 'co-attacker') {
-                        newRole = 'defender';
-                    } else if (currentRole === 'defender') {
-                        newRole = 'attacker';
-                    } else {
-                        newRole = 'observer';
-                    }
-                    
-                    newRoles[playerId] = newRole;
-                });
+                if (currentAttacker && currentCoAttacker && currentDefender) {
+                    newRoles[currentCoAttacker] = 'attacker';
+                    newRoles[currentAttacker] = 'defender';
+                    newRoles[currentDefender] = 'co-attacker';
+                    console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
+                }
+            } else if (playerCount >= 4) {
+                // 4+ игроков: со-атакующий → главный атакующий, следующий → защитник, следующий → со-атакующий
+                const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+                const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+                const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
                 
-                newState.playerRoles = newRoles;
-                console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
-            } else {
-                // 4+ игроков: роли сдвигаются на 2 вперед
-                const currentRoles = { ...prev.playerRoles };
-                const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-                
-                playerIds.forEach((playerId) => {
-                    const currentRole = currentRoles[playerId];
-                    let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
+                if (currentAttacker && currentCoAttacker && currentDefender) {
+                    const coAttackerIndex = playerIds.indexOf(currentCoAttacker);
+                    const nextAfterCoAttacker = playerIds[(coAttackerIndex + 1) % playerIds.length];
+                    const nextAfterNewDefender = playerIds[(playerIds.indexOf(nextAfterCoAttacker) + 1) % playerIds.length];
                     
-                    if (currentRole === 'attacker') {
-                        newRole = 'co-attacker';
-                    } else if (currentRole === 'co-attacker') {
-                        newRole = 'defender';
-                    } else if (currentRole === 'defender') {
-                        newRole = 'observer';
-                    } else {
-                        // Находим следующего наблюдателя, который станет атакующим
-                        const observerIndex = playerIds.indexOf(playerId);
-                        const nextObserverIndex = (observerIndex + 1) % playerIds.length;
-                        const nextObserverId = playerIds[nextObserverIndex];
-                        
-                        if (currentRoles[nextObserverId] === 'observer') {
-                            newRole = 'attacker';
-                        } else {
-                            newRole = 'observer';
+                    newRoles[currentCoAttacker] = 'attacker';
+                    newRoles[nextAfterCoAttacker] = 'defender';
+                    newRoles[nextAfterNewDefender] = 'co-attacker';
+                    
+                    playerIds.forEach(id => {
+                        if (![currentCoAttacker, nextAfterCoAttacker, nextAfterNewDefender].includes(id)) {
+                            newRoles[id] = 'observer';
                         }
-                    }
+                    });
                     
-                    newRoles[playerId] = newRole;
-                });
-                
-                newState.playerRoles = newRoles;
-                console.log('🎯 4+ игроков - роли сдвинуты на 2 вперед');
+                    console.log('🎯 4+ игроков - роли сдвинуты');
+                }
             }
             
+            // Применяем новые роли, если они были изменены
+            if (Object.keys(newRoles).length > 0) {
+                newState.playerRoles = { ...currentRoles, ...newRoles };
+            }
+
+            // Добавляем защитника в очередь добора карт и обрабатываем её
+            const currentQueue = [...(prev.drawQueue || [])];
+            currentQueue.push(myId); // Защитник добавляется в конец очереди
+            newState.drawQueue = currentQueue;
+            
+            // Обрабатываем очередь добора карт
+            const deck = [...(prev.deck || [])];
+            const hands = { ...newState.hands };
+            
+            for (const playerId of currentQueue) {
+                const playerHand = hands[playerId] || [];
+                
+                // Добираем карты до 6, если в колоде есть карты
+                while (playerHand.length < 6 && deck.length > 0) {
+                    const card = deck.shift();
+                    if (card) {
+                        playerHand.push(card);
+                        console.log(`🎯 Игрок ${playerId} получил карту: ${card.name}`);
+                    }
+                }
+                
+                hands[playerId] = playerHand;
+            }
+            
+            newState.deck = deck;
+            newState.hands = hands;
+            newState.drawQueue = []; // Очищаем очередь после обработки
+
             return newState;
         });
+
+        // Сбрасываем локальные состояния
+        setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
+        setActiveCard(null);
+        setMousePosition(null);
+        setDefenseCards([]);
+        setActiveFirstAttackFactions([]);
+        setUsedDefenseCardFactions({});
+        // setDefenseFactionsBuffer({}); // Закомментировано, так как состояние закомментировано
+
+        // Проверяем окончание игры после небольшой задержки
+        setTimeout(() => {
+            checkGameEnd();
+        }, 100);
+
+        console.log('✅ Все карты со стола перенесены в руку, стол очищен, роли изменены, очередь добора обработана');
     };
 
     // Функции для автоматического добора карт
-    const addToDrawQueue = (playerId: string, isDefender: boolean = false) => {
-        console.log(`🎯 Добавляем игрока ${playerId} в очередь добора (защитник: ${isDefender})`);
-        
-        updateGame((prev) => {
-            const newState = { ...prev };
-            const currentQueue = [...(prev.drawQueue || [])];
-            
-            if (isDefender) {
-                // Защитник добавляется в конец очереди
-                currentQueue.push(playerId);
-            } else {
-                // Атакующие добавляются в начало очереди
-                currentQueue.unshift(playerId);
-            }
-            
-            newState.drawQueue = currentQueue;
-            console.log(`🎯 Очередь добора: ${currentQueue.join(', ')}`);
-            
-            return newState;
-        });
-    };
+    // addToDrawQueue теперь интегрирована в updateGame для атомарных обновлений
 
     const processDrawQueue = () => {
         console.log('🎯 Обрабатываем очередь добора карт');
@@ -590,93 +649,6 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 return { ...prev, defenseSlots: newDefenseSlots };
             });
         }
-    };
-
-    const handleTakeCards = () => {
-        const currentRole = getCurrentPlayerRole();
-        if (currentRole !== 'defender') {
-            console.log('❌ Только защитник может взять карты');
-            return;
-        }
-        
-        console.log('🎯 Взятие карт: переносим все карты со стола в руку');
-        
-        // Собираем все карты со стола (атаки и защиты)
-        const attackCards = game.slots?.filter(card => card !== null) || [];
-        const defenseCardsFromTable = (game.defenseSlots || []).filter(card => card !== null);
-        const allTableCards = [...attackCards, ...defenseCardsFromTable];
-        
-        console.log(`📦 Карты для взятия: ${allTableCards.length} карт`);
-        console.log('🃏 Карты атаки:', attackCards.map(card => card.name));
-        console.log('🛡️ Карты защиты:', defenseCardsFromTable.map(card => card.name));
-        
-        if (allTableCards.length === 0) {
-            console.log('⚠️ На столе нет карт для взятия');
-            alert('⚠️ На столе нет карт для взятия');
-            return;
-        }
-        
-        // Обновляем состояние игры
-        updateGame((prev) => {
-            const myCards = [...(prev.hands[myId] || [])];
-            const newHand = [...myCards, ...allTableCards];
-            
-            console.log(`✅ Карты добавлены в руку. Было: ${myCards.length}, стало: ${newHand.length}`);
-            
-            let newState = {
-                ...prev,
-                hands: {
-                    ...prev.hands,
-                    [myId]: newHand
-                },
-                slots: new Array(6).fill(null), // Очищаем стол от карт атаки
-                defenseSlots: new Array(6).fill(null), // Очищаем карты защиты
-                
-                // Сбрасываем состояния приоритета и кнопок
-                attackPriority: 'attacker' as 'attacker' | 'co-attacker',
-                mainAttackerHasPlayed: false,
-                attackerPassed: false,
-                coAttackerPassed: false,
-                attackerBitoPressed: false,
-                coAttackerBitoPressed: false,
-                attackerPasPressed: false,
-                coAttackerPasPressed: false,
-                
-                // Сбрасываем фракции
-                factionCounter: {},
-                activeFirstAttackFactions: [],
-                displayActiveFactions: [],
-                defenseFactionsBuffer: {},
-                usedDefenseCardFactions: {}
-            };
-            
-            return newState;
-        });
-        
-        // Очищаем локальные состояния
-        setDefenseCards([]);
-        setHoveredAttackCard(null);
-        setHoveredDefenseCard(null);
-        setActiveCard(null);
-        clearDrawQueue();
-        
-        // Меняем роли после взятия карт
-        setTimeout(() => {
-            rotateRolesAfterTakeCards();
-        }, 100);
-        
-        // Обрабатываем очередь добора карт
-        setTimeout(() => {
-            processDrawQueue();
-        }, 200);
-        
-        console.log('✅ Все карты со стола перенесены в руку, стол очищен');
-        alert(`✅ Взято ${allTableCards.length} карт со стола!`);
-        
-        // Проверяем окончание игры ПОСЛЕ действия конца хода
-        setTimeout(() => {
-            checkGameEnd();
-        }, 300);
     };
 
     // Функции для проверки окончания игры
@@ -744,7 +716,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
     // Функция для проверки, может ли карта защиты использовать фракцию
     const canDefenseCardUseFaction = (defenseCard: Card, factionId: number): boolean => {
-        const usedFactions = game.usedDefenseCardFactions?.[defenseCard.id] || [];
+        const usedFactions = usedDefenseCardFactions[defenseCard.id] || [];
         return !usedFactions.includes(factionId);
     };
 
@@ -776,12 +748,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             }
         });
         
-        // Сохраняем в глобальное состояние
-        updateGame(prev => ({
-            ...prev,
-            defenseFactionsBuffer: newBuffer
-        }));
-        
+        // setDefenseFactionsBuffer(newBuffer);
         console.log(`🎯 Сохранены фракции защиты в буфер:`, Object.keys(newBuffer).map(id => `${FACTIONS[parseInt(id)]}(${newBuffer[parseInt(id)]})`));
         return newBuffer;
     };
@@ -801,61 +768,53 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
     // };
 
     // Функции для работы с фракционной системой
-    // const updateActiveFactionsFromAttackCard = (card: Card) => {
-    //     // Проверяем, заполнен ли див атаки (6 карт)
-    //     const attackCardsCount = game.slots?.filter(slot => slot !== null).length || 0;
-    //     if (attackCardsCount >= 6) {
-    //         console.log(`🚫 Див атаки заполнен (${attackCardsCount}/6), блокируем изменение фракций`);
-    //         return;
-    //     }
+    const updateActiveFactionsFromAttackCard = (card: Card) => {
+        // Проверяем, заполнен ли див атаки (6 карт)
+        const attackCardsCount = game.slots?.filter(slot => slot !== null).length || 0;
+        if (attackCardsCount >= 6) {
+            console.log(`🚫 Див атаки заполнен (${attackCardsCount}/6), блокируем изменение фракций`);
+            return;
+        }
 
-    //     if (game.slots?.every(slot => slot === null)) {
-    //         // Первая карта - устанавливаем все её фракции как единицу
-    //         updateGame(prev => ({
-    //             ...prev,
-    //             activeFirstAttackFactions: card.factions,
-    //             factionCounter: card.factions.reduce((acc, factionId) => {
-    //                 acc[factionId] = 1;
-    //                 return acc;
-    //             }, {} as Record<number, number>)
-    //         }));
-    //         console.log(`🎯 Первая карта атаки - фракции установлены как единицу:`, getFactionNames(card.factions));
-    //         return;
-    //     }
+        if (game.slots?.every(slot => slot === null)) {
+            // Первая карта - устанавливаем все её фракции как единицу
+            setActiveFirstAttackFactions(card.factions);
+            // Обновляем счётчик - фракции первой карты как единица
+            setFactionCounter(prev => {
+                const newCounter = { ...prev };
+                card.factions.forEach(factionId => {
+                    newCounter[factionId] = 1;
+                });
+                return newCounter;
+            });
+            console.log(`🎯 Первая карта атаки - фракции установлены как единица:`, getFactionNames(card.factions));
+            return;
+        }
 
-    //     // Для последующих карт - сохраняем фракции защиты в буфер
-    //     saveDefenseFactionsToBuffer(factionCounter);
+        // Для последующих карт - сохраняем фракции защиты в буфер
+        saveDefenseFactionsToBuffer(factionCounter);
 
-    //     // Пересечение с фракциями первой карты атаки
-    //     const firstAttackFactions = getFirstAttackCardFactions();
-    //     const intersection = getFactionIntersection(card.factions, firstAttackFactions);
+        // Пересечение с фракциями первой карты атаки
+        const firstAttackFactions = getFirstAttackCardFactions();
+        const intersection = getFactionIntersection(card.factions, firstAttackFactions);
         
-    //     // Обновляем активные фракции первой карты - только пересекающиеся
-    //     updateGame(prev => {
-    //         const newCounter: Record<number, number> = {};
-    //         // Сохраняем только фракции из пересечения (не все фракции первой карты!)
-    //         intersection.forEach(factionId => {
-    //             if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
-    //                 newCounter[factionId] = prev.factionCounter[factionId];
-    //             }
-    //         });
-            
-    //         // Восстанавливаем фракции защиты из буфера
-    //         const defenseBuffer = prev.defenseFactionsBuffer || {};
-    //         Object.keys(defenseBuffer).forEach(factionIdStr => {
-    //             const factionId = parseInt(factionIdStr);
-    //             newCounter[factionId] = defenseBuffer[factionId];
-    //         });
-            
-    //         return {
-    //             ...prev,
-    //             activeFirstAttackFactions: intersection,
-    //             factionCounter: newCounter
-    //         };
-    //     });
+        // Обновляем активные фракции первой карты - только пересекающиеся
+        setActiveFirstAttackFactions(intersection);
         
-    //     console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
-    // };
+        // Обновляем счётчик только для ПЕРЕСЕКАЮЩИХСЯ фракций первой карты атаки
+        setFactionCounter(prev => {
+            const newCounter: Record<number, number> = {};
+            // Сохраняем только фракции из пересечения (не все фракции первой карты!)
+            intersection.forEach(factionId => {
+                if (prev[factionId] && prev[factionId] > 0) {
+                    newCounter[factionId] = prev[factionId];
+                }
+            });
+            return newCounter;
+        });
+        
+        console.log(`🎯 Карта атаки добавлена через див атаки - восстановлены фракции защиты`);
+    };
 
     const updateActiveFactionsFromDefenseCard = (card: Card) => {
         // Проверяем, заполнен ли див атаки (6 карт)
@@ -869,15 +828,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         const factionNames = getFactionNames(card.factions);
         
         // Обновляем счётчик
-        updateGame(prev => {
-            const newCounter = { ...prev.factionCounter };
+        setFactionCounter(prev => {
+            const newCounter = { ...prev };
             card.factions.forEach(factionId => {
                 newCounter[factionId] = (newCounter[factionId] || 0) + 1;
             });
-            return {
-                ...prev,
-                factionCounter: newCounter
-            };
+            return newCounter;
         });
         console.log(`🎯 Добавлены фракции защиты:`, factionNames);
         
@@ -930,25 +886,24 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         
         // Обновляем счётчик: оставляем только фракции первой карты атаки + пересечение
         const keepFactions = [...firstAttackFactions, ...intersection];
-        
-        updateGame(prev => {
+        setFactionCounter(prev => {
             const newCounter: Record<number, number> = {};
             keepFactions.forEach(factionId => {
-                if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
-                    newCounter[factionId] = prev.factionCounter[factionId];
+                if (prev[factionId] && prev[factionId] > 0) {
+                    newCounter[factionId] = prev[factionId];
                 }
             });
-            
-            return {
-                ...prev,
-                factionCounter: newCounter,
-                activeFirstAttackFactions: firstAttackFactions,
-                usedDefenseCardFactions: {
-                    ...prev.usedDefenseCardFactions,
-                    [defenseCard.id]: [...(prev.usedDefenseCardFactions?.[defenseCard.id] || []), ...intersection]
-                }
-            };
+            return newCounter;
         });
+        
+        // Обновляем активные фракции первой карты атаки
+        setActiveFirstAttackFactions(firstAttackFactions);
+        
+        // Отмечаем использованные фракции карты защиты
+        setUsedDefenseCardFactions(prev => ({
+            ...prev,
+            [defenseCard.id]: [...(prev[defenseCard.id] || []), ...intersection]
+        }));
         
         console.log(`🎯 Атакующая карта прикреплена через защитную. Фракции первой карты атаки: ${firstAttackFactionNames.join(', ')}, Пересечение: ${intersectionNames.join(', ')}`);
         
@@ -972,23 +927,28 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
         // Объединяем активные фракции с доступными фракциями защиты
         [...new Set([
-            ...(game.activeFirstAttackFactions || []),
+            ...activeFirstAttackFactions,
             ...allAvailableDefenseFactions
         ])];
 
-        // Используем глобальный счетчик фракций
-        const displayCounter: Record<number, number> = { ...game.factionCounter };
+        // Создаем счетчик для отображения
+        const displayCounter: Record<number, number> = {};
+        
+        // Добавляем счетчики от карт атаки (фракции первой карты)
+        activeFirstAttackFactions.forEach(factionId => {
+            displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
+        });
+        
+        // Добавляем счетчики от карт защиты
+        allAvailableDefenseFactions.forEach(factionId => {
+            displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
+        });
 
         // Обновляем отображаемые активные фракции
         const newActiveFactions = Object.entries(displayCounter)
             .filter(([_, count]) => count > 0)
             .map(([factionId, count]) => `${getFactionNames([Number(factionId)])[0]} (${count})`);
-        
-        // Обновляем глобальное состояние
-        updateGame(prev => ({
-            ...prev,
-            displayActiveFactions: newActiveFactions
-        }));
+        setActiveFactions(newActiveFactions);
     };
 
 
@@ -999,12 +959,12 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         }
 
         // Проверяем, есть ли общие фракции с активными фракциями первой карты
-        if (game.activeFirstAttackFactions && game.activeFirstAttackFactions.length > 0) {
-            const hasCommon = hasCommonFactions(card.factions, game.activeFirstAttackFactions);
+        if (activeFirstAttackFactions.length > 0) {
+            const hasCommon = hasCommonFactions(card.factions, activeFirstAttackFactions);
             if (!hasCommon) {
                 return { 
                     isValid: false, 
-                    reason: `Карта должна иметь общие фракции с первой картой атаки: ${getFactionNames(game.activeFirstAttackFactions).join(', ')}` 
+                    reason: `Карта должна иметь общие фракции с первой картой атаки: ${getFactionNames(activeFirstAttackFactions).join(', ')}` 
                 };
             }
         }
@@ -1049,20 +1009,18 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             return;
         }
 
+        setActiveCard(null);
+        setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
+
         if (!over) {
             console.log('❌ Нет цели для drop');
-            setActiveCard(null);
-            setHoveredAttackCard(null);
-            setHoveredDefenseCard(null);
             return;
         }
 
         const cardData = active.data.current as { card: Card; index: number; source: string };
         if (!cardData) {
             console.log('❌ Нет данных карты');
-            setActiveCard(null);
-            setHoveredAttackCard(null);
-            setHoveredDefenseCard(null);
             return;
         }
 
@@ -1084,8 +1042,6 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             
             if (!defenseCard) {
                 console.log('❌ Карта защиты не найдена');
-                setActiveCard(null);
-                setHoveredDefenseCard(null);
                 return;
             }
             
@@ -1101,10 +1057,10 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             const freeSlotIndex = game.slots?.findIndex(slot => slot === null) ?? -1;
             
             if (freeSlotIndex >= 0) {
-                console.log('🎯 Добавляем карту в слот через защитную карту', freeSlotIndex);
+                console.log('🎯 Добавляем карту в слот', freeSlotIndex);
                 
                 updateGame((prev) => {
-            const myCards = [...(prev.hands[myId] || [])];
+                    const myCards = [...(prev.hands[myId] || [])];
                     myCards.splice(cardData.index, 1);
                     
                     const slots = [...(prev.slots || [])];
@@ -1112,73 +1068,29 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                ...prev,
-                hands: { ...prev.hands, [myId]: myCards },
-                slots,
-            };
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
-                        console.log('🎯 Главный атакующий подкинул карту через защитную карту');
-                    }
-                    
-                    // Обновляем фракции (обрабатываем логику внутри updateGame для атомарности)
-                    const attackCardsCount = slots.filter(slot => slot !== null).length;
-                    console.log(`🎯 Количество карт атаки после добавления через защиту: ${attackCardsCount}`);
-                    
-                    if (attackCardsCount === 1) {
-                        // Первая карта - устанавливаем все её фракции
-                        newState.activeFirstAttackFactions = cardData.card.factions;
-                        newState.factionCounter = cardData.card.factions.reduce((acc, factionId) => {
-                            acc[factionId] = 1;
-                            return acc;
-                        }, {} as Record<number, number>);
-                        console.log(`🎯 Первая карта атаки через защиту - фракции установлены:`, getFactionNames(cardData.card.factions));
-                    } else if (attackCardsCount < 6) {
-                        // Сохраняем фракции защиты в буфер
-                        const defenseBuffer = { ...prev.factionCounter };
-                        
-                        // Пересечение с фракциями первой карты атаки
-                        const firstAttackFactions = prev.activeFirstAttackFactions || [];
-                        const intersection = getFactionIntersection(cardData.card.factions, firstAttackFactions);
-                        
-                        const newCounter: Record<number, number> = {};
-                        // Сохраняем только фракции из пересечения
-                        intersection.forEach(factionId => {
-                            if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
-                                newCounter[factionId] = prev.factionCounter[factionId];
-                            }
-                        });
-                        
-                        // Восстанавливаем фракции защиты из буфера
-                        Object.keys(prev.defenseFactionsBuffer || {}).forEach(factionIdStr => {
-                            const factionId = parseInt(factionIdStr);
-                            newCounter[factionId] = (prev.defenseFactionsBuffer || {})[factionId];
-                        });
-                        
-                        newState.activeFirstAttackFactions = intersection;
-                        newState.factionCounter = newCounter;
-                        newState.defenseFactionsBuffer = defenseBuffer;
-                        console.log(`🎯 Карта атаки через защиту добавлена - обновлены фракции`);
+                        console.log('🎯 Главный атакующий подкинул карту');
                     }
 
-                    // Добавляем игрока в очередь добора (внутри того же updateGame)
+                    // Добавляем игрока в очередь добора (атомарно)
                     const currentQueue = [...(prev.drawQueue || [])];
-                    currentQueue.unshift(myId);
+                    currentQueue.unshift(myId); // Атакующие добавляются в начало очереди
                     newState.drawQueue = currentQueue;
-                    console.log(`🎯 Игрок ${myId} добавлен в очередь добора: ${currentQueue.join(', ')}`);
+
+                    // Обновляем фракции после добавления карты (локальное состояние)
+                    updateActiveFactionsFromAttackCard(cardData.card);
 
                     return tryDeclareWinner(newState);
                 });
-                
-                // Сбрасываем состояние после успешного размещения
-                setActiveCard(null);
-                setHoveredDefenseCard(null);
             } else {
                 console.log('❌ Нет свободных слотов');
                 alert('❌ Нет свободных слотов на столе!');
-                setActiveCard(null);
-                setHoveredDefenseCard(null);
             }
             return;
         }
@@ -1196,12 +1108,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Добавляем карту защиты над выбранной картой атаки (в одном атомарном апдейте внутри addDefenseCard)
                     addDefenseCard(targetIndex, cardData.card, cardData.index);
-                    setActiveCard(null);
-                    setHoveredAttackCard(null);
                 } else {
                     alert('🛡️ Нет карт атаки для отбивания!');
-                    setActiveCard(null);
-                    setHoveredAttackCard(null);
                 }
                 return;
             }
@@ -1211,8 +1119,6 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             if (!validation.isValid) {
                 console.log('❌ Карта не прошла валидацию:', validation.reason);
                 alert(validation.reason);
-                setActiveCard(null);
-                setHoveredAttackCard(null);
                 return;
             }
 
@@ -1222,8 +1128,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             if (freeSlotIndex >= 0) {
                 console.log('🎯 Добавляем карту в слот', freeSlotIndex);
                 
-        updateGame((prev) => {
-            const myCards = [...(prev.hands[myId] || [])];
+                updateGame((prev) => {
+                    const myCards = [...(prev.hands[myId] || [])];
                     myCards.splice(cardData.index, 1);
                     
                     const slots = [...(prev.slots || [])];
@@ -1231,81 +1137,33 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                ...prev,
-                hands: { ...prev.hands, [myId]: myCards },
-                slots,
-            };
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
                         console.log('🎯 Главный атакующий подкинул карту');
                     }
-                    
-                    // Обновляем фракции (обрабатываем логику внутри updateGame для атомарности)
-                    const attackCardsCount = slots.filter(slot => slot !== null).length;
-                    console.log(`🎯 Количество карт атаки после добавления: ${attackCardsCount}`);
-                    
-                    if (attackCardsCount === 1) {
-                        // Первая карта - устанавливаем все её фракции
-                        newState.activeFirstAttackFactions = cardData.card.factions;
-                        newState.factionCounter = cardData.card.factions.reduce((acc, factionId) => {
-                            acc[factionId] = 1;
-                            return acc;
-                        }, {} as Record<number, number>);
-                        console.log(`🎯 Первая карта атаки - фракции установлены:`, getFactionNames(cardData.card.factions));
-                    } else if (attackCardsCount < 6) {
-                        // Сохраняем фракции защиты в буфер
-                        const defenseBuffer = { ...prev.factionCounter };
-                        
-                        // Пересечение с фракциями первой карты атаки
-                        const firstAttackFactions = prev.activeFirstAttackFactions || [];
-                        const intersection = getFactionIntersection(cardData.card.factions, firstAttackFactions);
-                        
-                        const newCounter: Record<number, number> = {};
-                        // Сохраняем только фракции из пересечения
-                        intersection.forEach(factionId => {
-                            if (prev.factionCounter?.[factionId] && prev.factionCounter[factionId] > 0) {
-                                newCounter[factionId] = prev.factionCounter[factionId];
-                            }
-                        });
-                        
-                        // Восстанавливаем фракции защиты из буфера
-                        Object.keys(prev.defenseFactionsBuffer || {}).forEach(factionIdStr => {
-                            const factionId = parseInt(factionIdStr);
-                            newCounter[factionId] = (prev.defenseFactionsBuffer || {})[factionId];
-                        });
-                        
-                        newState.activeFirstAttackFactions = intersection;
-                        newState.factionCounter = newCounter;
-                        newState.defenseFactionsBuffer = defenseBuffer;
-                        console.log(`🎯 Карта атаки добавлена - обновлены фракции`);
-                    }
 
-                    // Добавляем игрока в очередь добора (внутри того же updateGame)
+                    // Добавляем игрока в очередь добора (атомарно)
                     const currentQueue = [...(prev.drawQueue || [])];
-                    currentQueue.unshift(myId);
+                    currentQueue.unshift(myId); // Атакующие добавляются в начало очереди
                     newState.drawQueue = currentQueue;
-                    console.log(`🎯 Игрок ${myId} добавлен в очередь добора: ${currentQueue.join(', ')}`);
+
+                    // Обновляем фракции после добавления карты (локальное состояние)
+                    updateActiveFactionsFromAttackCard(cardData.card);
 
                     return tryDeclareWinner(newState);
                 });
                 
                 console.log('✅ Карта успешно добавлена!');
-                // Сбрасываем состояние после успешного размещения
-                setActiveCard(null);
-                setHoveredAttackCard(null);
             } else {
                 console.log('❌ Нет свободных слотов');
                 alert('🃏 Стол полон! Максимум 6 карт.');
-                setActiveCard(null);
-                setHoveredAttackCard(null);
             }
         }
-        
-        // Сбрасываем состояние в конце функции на случай, если не было обработано
-        setActiveCard(null);
-        setHoveredAttackCard(null);
-        setHoveredDefenseCard(null);
     };
 
     const addDefenseCard = (attackCardIndex: number, defenseCard: Card, handIndex?: number): boolean => {
@@ -1344,21 +1202,16 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 if (idx !== -1) myCards.splice(idx, 1);
             }
 
-            // Обновляем активные фракции и очередь добора для защитника
+            // Обновляем активные фракции (локальное состояние)
             updateActiveFactionsFromDefenseCard(defenseCard);
-            addToDrawQueue(myId, true);
+
+            // Добавляем защитника в очередь добора (атомарно)
+            const currentQueue = [...(prev.drawQueue || [])];
+            currentQueue.push(myId); // Защитник добавляется в конец очереди
+            newState.drawQueue = currentQueue;
 
             newState.hands = { ...prev.hands, [myId]: myCards };
             newState.defenseSlots = defenseSlots;
-            
-            // Инициализируем usedDefenseCardFactions для новой карты защиты
-            if (!newState.usedDefenseCardFactions) {
-                newState.usedDefenseCardFactions = {};
-            }
-            if (!newState.usedDefenseCardFactions[defenseCard.id]) {
-                newState.usedDefenseCardFactions[defenseCard.id] = [];
-            }
-            
             return newState;
         });
 
@@ -1423,13 +1276,6 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             factionEffects: {},
             activeFactions: [],
             
-            // Faction management
-            factionCounter: {},
-            activeFirstAttackFactions: [],
-            usedDefenseCardFactions: {},
-            displayActiveFactions: [],
-            defenseFactionsBuffer: {},
-            
             // Card power system
             minCardPower: 50,
             maxCardPower: 100,
@@ -1463,8 +1309,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0b1020", color: "#fff" }}>
             {/* Header with players and game info */}
             <div style={{ padding: 8, background: "#101826", position: "sticky", top: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: "1 1 auto", minWidth: 0 }}>
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>🎮 Игровая доска</h2>
                         <button
                             onClick={onRestartToLobby}
@@ -1594,12 +1440,31 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             </>
                         )}
                     </div>
-                    <div style={{ fontSize: 10, opacity: 0.7 }}>
+                    <div style={{ 
+                        fontSize: 10, 
+                        opacity: 0.7,
+                        flex: "0 1 auto",
+                        minWidth: 0,
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                    }}>
                         Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck?.length || 0} | Сброс: {game.discardPile?.length || 0}
                     </div>
-                    <div style={{ fontSize: 9, opacity: 0.5, marginTop: 2 }}>
-                        🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
-                    </div>
+                </div>
+                <div style={{ 
+                    fontSize: 9, 
+                    opacity: 0.5, 
+                    marginTop: 2,
+                    width: "100%",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    boxSizing: "border-box"
+                }}>
+                    🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name.length > 20 ? activeCard.card.name.substring(0, 20) + '...' : activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
                 </div>
                 
                 {/* Players with roles */}
@@ -1643,7 +1508,18 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
 
             {/* Center slots */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <div style={{ 
+                flex: 1, 
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                justifyContent: "flex-start", 
+                padding: "20px",
+                minHeight: "400px",
+                maxHeight: "60vh",
+                overflowY: "auto",
+                overflowX: "hidden"
+            }}>
                     {/* Игровой стол */}
                     <div style={{ 
                         padding: "20px", 
@@ -1651,9 +1527,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         borderRadius: "12px",
                         border: "2px solid #4B5563",
                         marginBottom: "12px",
-                                display: "flex",
-                                flexDirection: "column",
-                        alignItems: "center"
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        width: "100%",
+                        maxWidth: "100%"
                     }}>
                         <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
                             🎮 Игровой стол:
@@ -1697,7 +1575,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                     }}
                                     onCardHover={handleDefenseCardHover}
                                     onCardLeave={handleDefenseCardLeave}
-                                    highlightedCardIndex={gameMode === 'defense' ? hoveredAttackCard : null}
+                                    highlightedCardIndex={hoveredAttackCard}
                                     gameMode={gameMode}
                                     invalidDefenseCard={null}
                                     onDefenseCardHover={handleDefenseCardSlotHover}
@@ -1711,7 +1589,14 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             </div>
 
             {/* My hand */}
-            <div style={{ padding: 16 }}>
+            <div style={{ 
+                padding: 16, 
+                position: "sticky",
+                bottom: 0,
+                background: "#0b1020",
+                borderTop: "2px solid #1f2937",
+                zIndex: 10
+            }}>
                 <div style={{ fontSize: "16px", marginBottom: "12px", color: "#FFD700", textAlign: "center" }}>
                     🃏 Мои карты:
                 </div>
