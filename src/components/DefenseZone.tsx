@@ -53,7 +53,7 @@ const DefenseZone: React.FC<DefenseZoneProps> = ({
                 gap: `${cardGap}px`,
                 padding: `${containerPadding}px`,
                 background: "rgba(65, 105, 225, 0.05)", // Легкий синий фон
-                border: "2px dashed rgba(65, 105, 225, 0.3)",
+                border: "1px dashed rgba(65, 105, 225, 0.3)", // Тоньше для визуальной консистентности
                 borderRadius: "12px",
                 margin: "0 auto 20px auto",
                 position: "relative"
@@ -137,7 +137,7 @@ const DefenseCardDropZone: React.FC<{
                 alignItems: "center",
                 justifyContent: "center",
                 position: "relative",
-                border: isOver ? "2px solid #32CD32" : "none",
+                border: isOver ? "1px solid #32CD32" : "none",
                 borderRadius: "12px",
                 // Добавляем визуальную обратную связь для невалидных карт
                 backgroundColor: invalidDefenseCard === attackIndex ? "rgba(255, 0, 0, 0.1)" : "transparent",
@@ -238,12 +238,12 @@ const DefenseCardDropZone: React.FC<{
                             border: (() => {
                                 if (invalidDefenseCard === attackIndex) return "2px solid #FF0000"; // Красный для невалидных карт
                                 if ((playerRole === 'attacker' || playerRole === 'co-attacker') && highlightedDefenseCardIndex === attackIndex) {
-                                    return "2px solid #32CD32"; // Зеленый для подсветки атакующими
+                                    return "1px solid #32CD32"; // Зеленый для подсветки атакующими (тоньше)
                                 }
                                 if (playerRole === 'defender' && highlightedCardIndex === attackIndex) {
-                                    return "2px solid #32CD32"; // Зеленый для подсветки защитником
+                                    return "1px solid #32CD32"; // Зеленый для подсветки защитником (тоньше)
                                 }
-                                return "2px dashed rgba(65, 105, 225, 0.3)";
+                                return "1px dashed rgba(65, 105, 225, 0.3)"; // Тоньше для пустых слотов
                             })(),
                             borderRadius: "12px",
                             display: "flex",

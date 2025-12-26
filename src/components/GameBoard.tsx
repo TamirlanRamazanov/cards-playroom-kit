@@ -7,14 +7,20 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import DropZone from "./DropZone";
 import DefenseZone from "./DefenseZone";
 import { FACTIONS } from "../engine/cards";
+import { useGameStore } from "../store/gameStore";
 
 interface Props {
     myId: string;
-    game: GameState;
-    updateGame: (updater: (prev: GameState) => GameState) => void;
+    updateGame?: (fn: (prev: GameState) => GameState) => void;
 }
 
-export default function GameBoard({ myId, game, updateGame }: Props) {
+export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
+    // Используем Zustand store для чтения состояния
+    const { game } = useGameStore();
+    
+    // Используем updateGame из props, если передан, иначе из Zustand
+    // Props версия синхронизируется с PlayroomKit через App.tsx
+    const updateGame = updateGameProp || useGameStore.getState().updateGame;
     // Inline styles as fallback for Vercel compatibility
     const gameButtonStyle = {
         borderRadius: '4px',
@@ -427,102 +433,161 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         });
     };
 
-    // const rotateRolesAfterTakeCards = () => {
-    //     console.log('🎯 Смена ролей после взятия карт защитником');
-    //     
-    //     updateGame((prev) => {
-    //         const newState = { ...prev };
-    //         const playerIds = Object.keys(prev.players || {});
-    //         const playerCount = playerIds.length;
-    //         
-    //         if (playerCount === 2) {
-    //             // 2 игрока: роли не меняются
-    //             console.log('🎯 2 игрока - роли не меняются');
-    //         } else if (playerCount === 3) {
-    //             // 3 игрока: роли сдвигаются на 1 назад
-    //             const currentRoles = { ...prev.playerRoles };
-    //             const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-    //             
-    //             playerIds.forEach((playerId) => {
-    //                 const currentRole = currentRoles[playerId];
-    //                 let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
-    //                 
-    //                 if (currentRole === 'attacker') {
-    //                     newRole = 'co-attacker';
-    //                 } else if (currentRole === 'co-attacker') {
-    //                     newRole = 'defender';
-    //                 } else if (currentRole === 'defender') {
-    //                     newRole = 'attacker';
-    //                 } else {
-    //                     newRole = 'observer';
-    //                 }
-    //                 
-    //                 newRoles[playerId] = newRole;
-    //             });
-    //             
-    //             newState.playerRoles = newRoles;
-    //             console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
-    //         } else {
-    //             // 4+ игроков: роли сдвигаются на 2 вперед
-    //             const currentRoles = { ...prev.playerRoles };
-    //             const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-    //             
-    //             playerIds.forEach((playerId) => {
-    //                 const currentRole = currentRoles[playerId];
-    //                 let newRole: 'attacker' | 'co-attacker' | 'defender' | 'observer';
-    //                 
-    //                 if (currentRole === 'attacker') {
-    //                     newRole = 'co-attacker';
-    //                 } else if (currentRole === 'co-attacker') {
-    //                     newRole = 'defender';
-    //                 } else if (currentRole === 'defender') {
-    //                     newRole = 'observer';
-    //                 } else {
-    //                     // Находим следующего наблюдателя, который станет атакующим
-    //                     const observerIndex = playerIds.indexOf(playerId);
-    //                     const nextObserverIndex = (observerIndex + 1) % playerIds.length;
-    //                     const nextObserverId = playerIds[nextObserverIndex];
-    //                     
-    //                     if (currentRoles[nextObserverId] === 'observer') {
-    //                         newRole = 'attacker';
-    //                     } else {
-    //                         newRole = 'observer';
-    //                     }
-    //                 }
-    //                 
-    //                 newRoles[playerId] = newRole;
-    //             });
-    //             
-    //             newState.playerRoles = newRoles;
-    //             console.log('🎯 4+ игроков - роли сдвинуты на 2 вперед');
-    //         }
-    //         
-    //         return newState;
-    //     });
-    // };
+    // Функция для взятия карт защитником
+    const handleTakeCards = () => {
+        const role = getCurrentPlayerRole();
+        if (role !== 'defender') {
+            console.log('❌ Только защитник может взять карты');
+            return;
+        }
 
-    // Функции для автоматического добора карт
-    const addToDrawQueue = (playerId: string, isDefender: boolean = false) => {
-        console.log(`🎯 Добавляем игрока ${playerId} в очередь добора (защитник: ${isDefender})`);
-        
+        console.log('🎯 Взятие карт: переносим все карты со стола в руку');
+
+        // Собираем все карты со стола (атаки и защиты)
+        const attackCards = game.slots?.filter(card => card !== null) || [];
+        const defenseCardsFromTable = (game.defenseSlots || []).filter(card => card !== null);
+        const allTableCards = [...attackCards, ...defenseCardsFromTable];
+
+        console.log(`📦 Карты для взятия: ${allTableCards.length} карт`);
+        console.log('🃏 Карты атаки:', attackCards.map(card => card.name));
+        console.log('🛡️ Карты защиты:', defenseCardsFromTable.map(card => card.name));
+
+        if (allTableCards.length === 0) {
+            console.log('⚠️ На столе нет карт для взятия');
+            alert('⚠️ На столе нет карт для взятия');
+            return;
+        }
+
+        // Атомарно обновляем состояние игры: добавляем карты в руку, очищаем стол, сбрасываем состояния, меняем роли, обрабатываем очередь добора
         updateGame((prev) => {
             const newState = { ...prev };
-            const currentQueue = [...(prev.drawQueue || [])];
+            const myCards = [...(prev.hands[myId] || [])];
+            const newHand = [...myCards, ...allTableCards];
+
+            console.log(`✅ Карты добавлены в руку. Было: ${myCards.length}, стало: ${newHand.length}`);
+
+            // Обновляем руку защитника
+            newState.hands = {
+                ...prev.hands,
+                [myId]: newHand
+            };
+
+            // Очищаем стол
+            newState.slots = new Array(6).fill(null);
+            newState.defenseSlots = new Array(6).fill(null);
+
+            // Сбрасываем состояния кнопок и приоритетов
+            newState.attackPriority = 'attacker';
+            newState.mainAttackerHasPlayed = false;
+            newState.attackerPassed = false;
+            newState.coAttackerPassed = false;
+            newState.attackerBitoPressed = false;
+            newState.coAttackerBitoPressed = false;
+            newState.attackerPasPressed = false;
+            newState.coAttackerPasPressed = false;
+
+            // Меняем роли после взятия карт (встроенная логика)
+            const playerIds = Object.keys(prev.players || {});
+            const playerCount = playerIds.length;
+            const currentRoles = { ...prev.playerRoles };
+            const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
             
-            if (isDefender) {
-                // Защитник добавляется в конец очереди
-                currentQueue.push(playerId);
-            } else {
-                // Атакующие добавляются в начало очереди
-                currentQueue.unshift(playerId);
+            if (playerCount === 2) {
+                // 2 игрока: роли не меняются
+                console.log('🎯 2 игрока - роли не меняются');
+            } else if (playerCount === 3) {
+                // 3 игрока: со-атакующий → главный атакующий, главный → защитник, защитник → со-атакующий
+                const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+                const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+                const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
+                
+                if (currentAttacker && currentCoAttacker && currentDefender) {
+                    newRoles[currentCoAttacker] = 'attacker';
+                    newRoles[currentAttacker] = 'defender';
+                    newRoles[currentDefender] = 'co-attacker';
+                    console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
+                }
+            } else if (playerCount >= 4) {
+                // 4+ игроков: со-атакующий → главный атакующий, следующий → защитник, следующий → со-атакующий
+                const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+                const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+                const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
+                
+                if (currentAttacker && currentCoAttacker && currentDefender) {
+                    const coAttackerIndex = playerIds.indexOf(currentCoAttacker);
+                    const nextAfterCoAttacker = playerIds[(coAttackerIndex + 1) % playerIds.length];
+                    const nextAfterNewDefender = playerIds[(playerIds.indexOf(nextAfterCoAttacker) + 1) % playerIds.length];
+                    
+                    newRoles[currentCoAttacker] = 'attacker';
+                    newRoles[nextAfterCoAttacker] = 'defender';
+                    newRoles[nextAfterNewDefender] = 'co-attacker';
+                    
+                    playerIds.forEach(id => {
+                        if (![currentCoAttacker, nextAfterCoAttacker, nextAfterNewDefender].includes(id)) {
+                            newRoles[id] = 'observer';
+                        }
+                    });
+                    
+                    console.log('🎯 4+ игроков - роли сдвинуты');
+                }
             }
             
+            // Применяем новые роли, если они были изменены
+            if (Object.keys(newRoles).length > 0) {
+                newState.playerRoles = { ...currentRoles, ...newRoles };
+            }
+
+            // Добавляем защитника в очередь добора карт и обрабатываем её
+            const currentQueue = [...(prev.drawQueue || [])];
+            currentQueue.push(myId); // Защитник добавляется в конец очереди
             newState.drawQueue = currentQueue;
-            console.log(`🎯 Очередь добора: ${currentQueue.join(', ')}`);
             
+            // Обрабатываем очередь добора карт
+            const deck = [...(prev.deck || [])];
+            const hands = { ...newState.hands };
+            
+            for (const playerId of currentQueue) {
+                const playerHand = hands[playerId] || [];
+                
+                // Добираем карты до 6, если в колоде есть карты
+                while (playerHand.length < 6 && deck.length > 0) {
+                    const card = deck.shift();
+                    if (card) {
+                        playerHand.push(card);
+                        console.log(`🎯 Игрок ${playerId} получил карту: ${card.name}`);
+                    }
+                }
+                
+                hands[playerId] = playerHand;
+            }
+            
+            newState.deck = deck;
+            newState.hands = hands;
+            newState.drawQueue = []; // Очищаем очередь после обработки
+
             return newState;
         });
+
+        // Сбрасываем локальные состояния
+        setHoveredAttackCard(null);
+        setHoveredDefenseCard(null);
+        setActiveCard(null);
+        setMousePosition(null);
+        setDefenseCards([]);
+        setActiveFirstAttackFactions([]);
+        setUsedDefenseCardFactions({});
+        // setDefenseFactionsBuffer({}); // Закомментировано, так как состояние закомментировано
+
+        // Проверяем окончание игры после небольшой задержки
+        setTimeout(() => {
+            checkGameEnd();
+        }, 100);
+
+        console.log('✅ Все карты со стола перенесены в руку, стол очищен, роли изменены, очередь добора обработана');
     };
+
+    // Функции для автоматического добора карт
+    // addToDrawQueue теперь интегрирована в updateGame для атомарных обновлений
 
     const processDrawQueue = () => {
         console.log('🎯 Обрабатываем очередь добора карт');
@@ -995,7 +1060,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 console.log('🎯 Добавляем карту в слот', freeSlotIndex);
                 
                 updateGame((prev) => {
-            const myCards = [...(prev.hands[myId] || [])];
+                    const myCards = [...(prev.hands[myId] || [])];
                     myCards.splice(cardData.index, 1);
                     
                     const slots = [...(prev.slots || [])];
@@ -1003,21 +1068,23 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                ...prev,
-                hands: { ...prev.hands, [myId]: myCards },
-                slots,
-            };
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
                         console.log('🎯 Главный атакующий подкинул карту');
                     }
 
-                    // Обновляем фракции после добавления карты
-                    updateActiveFactionsFromAttackCard(cardData.card);
+                    // Добавляем игрока в очередь добора (атомарно)
+                    const currentQueue = [...(prev.drawQueue || [])];
+                    currentQueue.unshift(myId); // Атакующие добавляются в начало очереди
+                    newState.drawQueue = currentQueue;
 
-                    // Добавляем игрока в очередь добора
-                    addToDrawQueue(myId, false);
+                    // Обновляем фракции после добавления карты (локальное состояние)
+                    updateActiveFactionsFromAttackCard(cardData.card);
 
                     return tryDeclareWinner(newState);
                 });
@@ -1061,8 +1128,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             if (freeSlotIndex >= 0) {
                 console.log('🎯 Добавляем карту в слот', freeSlotIndex);
                 
-        updateGame((prev) => {
-            const myCards = [...(prev.hands[myId] || [])];
+                updateGame((prev) => {
+                    const myCards = [...(prev.hands[myId] || [])];
                     myCards.splice(cardData.index, 1);
                     
                     const slots = [...(prev.slots || [])];
@@ -1070,21 +1137,23 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                ...prev,
-                hands: { ...prev.hands, [myId]: myCards },
-                slots,
-            };
+                        ...prev,
+                        hands: { ...prev.hands, [myId]: myCards },
+                        slots,
+                    };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
                         console.log('🎯 Главный атакующий подкинул карту');
                     }
 
-                    // Обновляем фракции после добавления карты
-                    updateActiveFactionsFromAttackCard(cardData.card);
+                    // Добавляем игрока в очередь добора (атомарно)
+                    const currentQueue = [...(prev.drawQueue || [])];
+                    currentQueue.unshift(myId); // Атакующие добавляются в начало очереди
+                    newState.drawQueue = currentQueue;
 
-                    // Добавляем игрока в очередь добора
-                    addToDrawQueue(myId, false);
+                    // Обновляем фракции после добавления карты (локальное состояние)
+                    updateActiveFactionsFromAttackCard(cardData.card);
 
                     return tryDeclareWinner(newState);
                 });
@@ -1133,9 +1202,13 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                 if (idx !== -1) myCards.splice(idx, 1);
             }
 
-            // Обновляем активные фракции и очередь добора для защитника
+            // Обновляем активные фракции (локальное состояние)
             updateActiveFactionsFromDefenseCard(defenseCard);
-            addToDrawQueue(myId, true);
+
+            // Добавляем защитника в очередь добора (атомарно)
+            const currentQueue = [...(prev.drawQueue || [])];
+            currentQueue.push(myId); // Защитник добавляется в конец очереди
+            newState.drawQueue = currentQueue;
 
             newState.hands = { ...prev.hands, [myId]: myCards };
             newState.defenseSlots = defenseSlots;
@@ -1236,8 +1309,8 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0b1020", color: "#fff" }}>
             {/* Header with players and game info */}
             <div style={{ padding: 8, background: "#101826", position: "sticky", top: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: "1 1 auto", minWidth: 0 }}>
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>🎮 Игровая доска</h2>
                         <button
                             onClick={onRestartToLobby}
@@ -1353,10 +1426,7 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                                 {/* Кнопка для защитника */}
                                 {getCurrentPlayerRole() === 'defender' && (
                                     <button
-                                        onClick={() => {
-                                            // TODO: Реализовать взятие карт защитником
-                                            alert('🛡️ Функция "Взять карты" будет реализована в следующей фазе');
-                                        }}
+                                        onClick={handleTakeCards}
                                         className="game-button game-button-take"
                                         style={{
                                             ...gameButtonStyle,
@@ -1370,12 +1440,31 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                             </>
                         )}
                     </div>
-                    <div style={{ fontSize: 10, opacity: 0.7 }}>
+                    <div style={{ 
+                        fontSize: 10, 
+                        opacity: 0.7,
+                        flex: "0 1 auto",
+                        minWidth: 0,
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                    }}>
                         Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck?.length || 0} | Сброс: {game.discardPile?.length || 0}
                     </div>
-                    <div style={{ fontSize: 9, opacity: 0.5, marginTop: 2 }}>
-                        🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
-                    </div>
+                </div>
+                <div style={{ 
+                    fontSize: 9, 
+                    opacity: 0.5, 
+                    marginTop: 2,
+                    width: "100%",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    boxSizing: "border-box"
+                }}>
+                    🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name.length > 20 ? activeCard.card.name.substring(0, 20) + '...' : activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
                 </div>
                 
                 {/* Players with roles */}
@@ -1419,7 +1508,18 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
 
 
             {/* Center slots */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <div style={{ 
+                flex: 1, 
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                justifyContent: "flex-start", 
+                padding: "20px",
+                minHeight: "400px",
+                maxHeight: "60vh",
+                overflowY: "auto",
+                overflowX: "hidden"
+            }}>
                     {/* Игровой стол */}
                     <div style={{ 
                         padding: "20px", 
@@ -1427,9 +1527,11 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
                         borderRadius: "12px",
                         border: "2px solid #4B5563",
                         marginBottom: "12px",
-                                display: "flex",
-                                flexDirection: "column",
-                        alignItems: "center"
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        width: "100%",
+                        maxWidth: "100%"
                     }}>
                         <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
                             🎮 Игровой стол:
@@ -1487,7 +1589,14 @@ export default function GameBoard({ myId, game, updateGame }: Props) {
             </div>
 
             {/* My hand */}
-            <div style={{ padding: 16 }}>
+            <div style={{ 
+                padding: 16, 
+                position: "sticky",
+                bottom: 0,
+                background: "#0b1020",
+                borderTop: "2px solid #1f2937",
+                zIndex: 10
+            }}>
                 <div style={{ fontSize: "16px", marginBottom: "12px", color: "#FFD700", textAlign: "center" }}>
                     🃏 Мои карты:
                 </div>
