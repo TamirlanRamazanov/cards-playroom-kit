@@ -31,6 +31,12 @@ const initialGameState: GameState = {
     selectedTarget: undefined,
     factionEffects: {},
     activeFactions: [],
+    // Faction management
+    factionCounter: {},
+    activeFirstAttackFactions: [],
+    usedDefenseCardFactions: {},
+    displayActiveFactions: [],
+    defenseFactionsBuffer: {},
     // Card power system
     minCardPower: 50,
     maxCardPower: 100,

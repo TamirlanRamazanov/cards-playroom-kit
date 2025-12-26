@@ -1275,6 +1275,12 @@ export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
             targetSelectionMode: false,
             factionEffects: {},
             activeFactions: [],
+            // Faction management
+            factionCounter: {},
+            activeFirstAttackFactions: [],
+            usedDefenseCardFactions: {},
+            displayActiveFactions: [],
+            defenseFactionsBuffer: {},
             
             // Card power system
             minCardPower: 50,

@@ -231,6 +231,12 @@ export default function App() {
         selectedTarget: undefined,
         factionEffects: {},
         activeFactions: [],
+        // Faction management
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        defenseFactionsBuffer: {},
         // Card power system (align with GameState)
         minCardPower: 50,
         maxCardPower: 100,
