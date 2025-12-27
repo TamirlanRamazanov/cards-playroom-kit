@@ -67,6 +67,56 @@ export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
         }
     }, [game.gameInitialized]);
 
+    // Обработка игроков, которые подключаются после старта игры
+    useEffect(() => {
+        if (game.phase !== "playing" || !game.gameInitialized) return;
+        
+        const allPlayerIds = Object.keys(game.players || {});
+        const playersWithCards = Object.keys(game.hands || {});
+        const playersWithoutCards = allPlayerIds.filter(id => !playersWithCards.includes(id));
+        
+        // Если есть игроки без карт, раздаем им карты и назначаем роли
+        if (playersWithoutCards.length > 0) {
+            console.log(`🎯 Обнаружены игроки без карт: ${playersWithoutCards.join(', ')}`);
+            
+            updateGame((prev) => {
+                const newState = { ...prev };
+                const deck = [...(prev.deck || [])];
+                const hands = { ...prev.hands };
+                const playerRoles = { ...prev.playerRoles };
+                
+                // Раздаем карты новым игрокам
+                playersWithoutCards.forEach(playerId => {
+                    const playerCards: Card[] = [];
+                    // Добираем карты до 6, если в колоде есть карты
+                    while (playerCards.length < 6 && deck.length > 0) {
+                        const card = deck.shift();
+                        if (card) {
+                            playerCards.push(card);
+                        }
+                    }
+                    
+                    if (playerCards.length > 0) {
+                        hands[playerId] = playerCards;
+                        console.log(`🎯 Игроку ${playerId} раздано ${playerCards.length} карт`);
+                    }
+                    
+                    // Назначаем роль observer, если у игрока еще нет роли
+                    if (!playerRoles[playerId]) {
+                        playerRoles[playerId] = 'observer';
+                        console.log(`🎯 Игроку ${playerId} назначена роль observer`);
+                    }
+                });
+                
+                newState.deck = deck;
+                newState.hands = hands;
+                newState.playerRoles = playerRoles;
+                
+                return newState;
+            });
+        }
+    }, [game.players, game.hands, game.phase, game.gameInitialized, updateGame]);
+
     // useEffect для синхронизации размера div защиты с div атаки
     useEffect(() => {
         syncDefenseZoneSize();
@@ -1068,10 +1118,10 @@ export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                        ...prev,
-                        hands: { ...prev.hands, [myId]: myCards },
-                        slots,
-                    };
+                ...prev,
+                hands: { ...prev.hands, [myId]: myCards },
+                slots,
+            };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;
@@ -1128,8 +1178,8 @@ export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
             if (freeSlotIndex >= 0) {
                 console.log('🎯 Добавляем карту в слот', freeSlotIndex);
                 
-                updateGame((prev) => {
-                    const myCards = [...(prev.hands[myId] || [])];
+        updateGame((prev) => {
+            const myCards = [...(prev.hands[myId] || [])];
                     myCards.splice(cardData.index, 1);
                     
                     const slots = [...(prev.slots || [])];
@@ -1137,10 +1187,10 @@ export default function GameBoard({ myId, updateGame: updateGameProp }: Props) {
                     
                     // Отмечаем, что главный атакующий подкинул карту
                     let newState = {
-                        ...prev,
-                        hands: { ...prev.hands, [myId]: myCards },
-                        slots,
-                    };
+                ...prev,
+                hands: { ...prev.hands, [myId]: myCards },
+                slots,
+            };
 
                     if (getCurrentPlayerRole() === 'attacker') {
                         newState.mainAttackerHasPlayed = true;

@@ -87,6 +87,9 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
     const playerIds = Object.keys(currentGame.players || {});
     const playerCount = playerIds.length;
     
+    console.log(`🎯 createGameWithDeck вызвана с ${playerCount} игроками:`, playerIds);
+    console.log(`🎯 Список игроков:`, Object.entries(currentGame.players || {}).map(([id, p]) => `${id}: ${p.name}`));
+    
     if (playerCount === 0) {
         console.log('❌ Нет игроков для создания игры');
         return currentGame;
@@ -115,8 +118,13 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
         const playerId = playerIds[i];
         const playerCards = shuffledDeck.splice(0, 6);
         
+        if (playerCards.length !== 6) {
+            console.warn(`⚠️ Игроку ${playerId} раздано только ${playerCards.length} карт вместо 6!`);
+        }
+        
         hands[playerId] = playerCards;
         turnOrder.push(playerId);
+        console.log(`🎯 Игроку ${playerId} (${currentGame.players[playerId]?.name || playerId}) раздано ${playerCards.length} карт`);
     }
     
     // Оставшиеся карты остаются в колоде
@@ -125,6 +133,7 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
     console.log(`🎯 Создана колода из ${CARDS_DATA.length} карт`);
     console.log(`🎯 Раздано по 6 карт ${playerIds.length} игрокам`);
     console.log(`🎯 Осталось в колоде: ${remainingDeck.length} карт`);
+    console.log(`🎯 Распределение карт:`, Object.entries(hands).map(([id, cards]) => `${id}: ${cards.length}`));
 
     // Определяем первого игрока
     const firstPlayer = determineFirstPlayer(hands, currentGame.players);
@@ -457,7 +466,31 @@ export default function App() {
                     {myId === zustandGame.hostId && (
                         <button
                             onClick={() => {
-                                updateGame((prev) => createGameWithDeck(prev));
+                                // Используем актуальное состояние из Zustand для получения списка игроков
+                                const currentPlayers = Object.keys(zustandGame.players || {});
+                                console.log(`🎯 Хост нажал "Начать игру". Текущие игроки: ${currentPlayers.length}`, currentPlayers);
+                                
+                                if (currentPlayers.length < 2) {
+                                    alert('❌ Минимум 2 игрока для начала игры!');
+                                    return;
+                                }
+                                
+                                if (currentPlayers.length > 6) {
+                                    alert('❌ Максимум 6 игроков!');
+                                    return;
+                                }
+                                
+                                updateGame((prev) => {
+                                    // Двойная проверка: используем актуальное состояние из prev
+                                    const actualPlayerIds = Object.keys(prev.players || {});
+                                    console.log(`🎯 В updateGame: актуальные игроки: ${actualPlayerIds.length}`, actualPlayerIds);
+                                    
+                                    if (actualPlayerIds.length !== currentPlayers.length) {
+                                        console.warn(`⚠️ Несоответствие количества игроков! В UI: ${currentPlayers.length}, в состоянии: ${actualPlayerIds.length}`);
+                                    }
+                                    
+                                    return createGameWithDeck(prev);
+                                });
                             }}
                             disabled={Object.keys(zustandGame.players || {}).length < 2 || Object.keys(zustandGame.players || {}).length > 6}
                             style={{
