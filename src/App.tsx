@@ -56,10 +56,10 @@ const determineFirstPlayer = (hands: GameState["hands"], players: GameState["pla
     return weakestPlayer;
 };
 
-// Функция для назначения ролей игрокам
+// Функция для назначения ролей игрокам (поддерживает 2-6 игроков)
 const assignPlayerRoles = (firstPlayerId: string, playerIds: string[]): Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> => {
     const roles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-    
+    const playerCount = playerIds.length;
     const firstPlayerIndex = playerIds.indexOf(firstPlayerId);
     
     // Назначаем роли по кругу от первого игрока
@@ -70,22 +70,37 @@ const assignPlayerRoles = (firstPlayerId: string, playerIds: string[]): Record<s
             roles[playerId] = 'attacker'; // Главный атакующий
         } else if (relativeIndex === 1) {
             roles[playerId] = 'defender'; // Защищающийся
-        } else if (relativeIndex === 2 && playerIds.length >= 3) {
+        } else if (relativeIndex === 2 && playerCount >= 3) {
             roles[playerId] = 'co-attacker'; // Со-атакующий
         } else {
+            // Для 4-6 игроков: остальные становятся наблюдателями
             roles[playerId] = 'observer'; // Наблюдающий
         }
     });
     
+    console.log(`🎯 Распределение ролей для ${playerCount} игроков:`, roles);
     return roles;
 };
 
 // Функция для создания игрового состояния с колодой
 const createGameWithDeck = (currentGame: GameState): GameState => {
     const playerIds = Object.keys(currentGame.players || {});
+    const playerCount = playerIds.length;
     
-    if (playerIds.length === 0) {
+    if (playerCount === 0) {
         console.log('❌ Нет игроков для создания игры');
+        return currentGame;
+    }
+    
+    if (playerCount < 2) {
+        console.log('❌ Минимум 2 игрока для начала игры');
+        alert('❌ Минимум 2 игрока для начала игры!');
+        return currentGame;
+    }
+    
+    if (playerCount > 6) {
+        console.log('❌ Максимум 6 игроков');
+        alert('❌ Максимум 6 игроков!');
         return currentGame;
     }
     
@@ -419,22 +434,41 @@ export default function App() {
             >
                 <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
                     <h1 style={{ fontSize: 20, marginBottom: 8 }}>Лобби</h1>
-                    <div style={{ marginBottom: 12 }}>
-                        Игроки: {Object.values(zustandGame.players || {}).map((p) => p.name).join(", ")}
+                    <div style={{ marginBottom: 8, fontSize: 14, opacity: 0.8 }}>
+                        Игроков: {Object.keys(zustandGame.players || {}).length} / 6
                     </div>
+                    <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.6 }}>
+                        {Object.entries(zustandGame.players || {}).map(([playerId, player]) => (
+                            <div key={playerId} style={{ marginBottom: 4 }}>
+                                {player.name} {playerId === zustandGame.hostId ? '👑 (Хост)' : ''}
+                            </div>
+                        ))}
+                    </div>
+                    {Object.keys(zustandGame.players || {}).length < 2 && (
+                        <div style={{ marginBottom: 12, fontSize: 12, color: '#fbbf24' }}>
+                            ⚠️ Минимум 2 игрока для начала игры
+                        </div>
+                    )}
+                    {Object.keys(zustandGame.players || {}).length >= 6 && (
+                        <div style={{ marginBottom: 12, fontSize: 12, color: '#ef4444' }}>
+                            ⚠️ Достигнут максимум игроков (6)
+                        </div>
+                    )}
                     {myId === zustandGame.hostId && (
                         <button
                             onClick={() => {
                                 updateGame((prev) => createGameWithDeck(prev));
                             }}
+                            disabled={Object.keys(zustandGame.players || {}).length < 2 || Object.keys(zustandGame.players || {}).length > 6}
                             style={{
                                 width: "100%",
                                 padding: 10,
                                 borderRadius: 10,
                                 border: 0,
-                                background: "#10b981",
+                                background: (Object.keys(zustandGame.players || {}).length < 2 || Object.keys(zustandGame.players || {}).length > 6) ? "#6b7280" : "#10b981",
                                 color: "#fff",
-                                cursor: "pointer",
+                                cursor: (Object.keys(zustandGame.players || {}).length < 2 || Object.keys(zustandGame.players || {}).length > 6) ? "not-allowed" : "pointer",
+                                opacity: (Object.keys(zustandGame.players || {}).length < 2 || Object.keys(zustandGame.players || {}).length > 6) ? 0.5 : 1,
                             }}
                         >
                             Начать игру
