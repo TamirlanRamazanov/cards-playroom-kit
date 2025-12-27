@@ -5,9 +5,10 @@ interface MainMenuProps {
     onStartGame: () => void;
     onDebugGame: () => void;
     onDebugGameV2: () => void;
+    onGameV2?: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGameV2 }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGameV2, onGameV2 }) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -263,33 +264,63 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGa
                     Rules
                 </button>
 
-                <button
-                    onClick={() => console.log("Credits clicked")}
-                    style={{
-                        position: "absolute",
-                        top: "95%", // Настройте позицию
-                        left: "50%", // Настройте позицию
-                        transform: "translate(-50%, -50%) rotate(4deg)",
-                        width: "75%", // 20% от ширины изображения
-                        height: "8%", // 8% от высоты изображения
-                        border: "none", //"2px solid green", // Временно видимая граница
-                        background: "transparent", //"rgba(0, 255, 0, 0.3)", // Временно видимый фон
-                        cursor: "pointer",
-                        fontSize: "clamp(12px, 3vw, 64px)",
-                        fontWeight: "bold",
-                        color: "#8B0000",
-                        fontFamily: "Pirata One, cursive",
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-                        zIndex: 4,
-                        
-                        display: "flex",
-                        alignItems: "flex-end",      /* Позиционируем от низа */
-                        justifyContent: "center",    /* Горизонтальное центрирование */
-                        paddingBottom: "3%",  
-                    }}
-                >
-                    Credits
-                </button>
+                {onGameV2 ? (
+                    <button
+                        onClick={onGameV2}
+                        style={{
+                            position: "absolute",
+                            top: "95%", // Настройте позицию
+                            left: "50%", // Настройте позицию
+                            transform: "translate(-50%, -50%) rotate(4deg)",
+                            width: "75%", // 20% от ширины изображения
+                            height: "8%", // 8% от высоты изображения
+                            border: "none", //"2px solid green", // Временно видимая граница
+                            background: "transparent", //"rgba(0, 255, 0, 0.3)", // Временно видимый фон
+                            cursor: "pointer",
+                            fontSize: "clamp(12px, 3vw, 64px)",
+                            fontWeight: "bold",
+                            color: "#8B0000",
+                            fontFamily: "Pirata One, cursive",
+                            textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+                            zIndex: 4,
+                            
+                            display: "flex",
+                            alignItems: "flex-end",      /* Позиционируем от низа */
+                            justifyContent: "center",    /* Горизонтальное центрирование */
+                            paddingBottom: "3%",  
+                        }}
+                    >
+                        Play V2
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => console.log("Credits clicked")}
+                        style={{
+                            position: "absolute",
+                            top: "95%", // Настройте позицию
+                            left: "50%", // Настройте позицию
+                            transform: "translate(-50%, -50%) rotate(4deg)",
+                            width: "75%", // 20% от ширины изображения
+                            height: "8%", // 8% от высоты изображения
+                            border: "none", //"2px solid green", // Временно видимая граница
+                            background: "transparent", //"rgba(0, 255, 0, 0.3)", // Временно видимый фон
+                            cursor: "pointer",
+                            fontSize: "clamp(12px, 3vw, 64px)",
+                            fontWeight: "bold",
+                            color: "#8B0000",
+                            fontFamily: "Pirata One, cursive",
+                            textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+                            zIndex: 4,
+                            
+                            display: "flex",
+                            alignItems: "flex-end",      /* Позиционируем от низа */
+                            justifyContent: "center",    /* Горизонтальное центрирование */
+                            paddingBottom: "3%",  
+                        }}
+                    >
+                        Credits
+                    </button>
+                )}
                 
             </div>
         </div>

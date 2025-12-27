@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { insertCoin, myPlayer, useMultiplayerState } from "playroomkit";
 import type { GameState } from "./types";
 import GameBoard from "./components/GameBoard";
+import GameBoardV2 from "./components/GameBoardV2";
 import MainMenu from "./components/MainMenu";
 import DebugGameBoard from "./components/DebugGameBoard";
 // import DebugGameBoardV2 from "./components/DebugGameBoardV2";
@@ -226,7 +227,8 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
 export default function App() {
     const [ready, setReady] = useState(false);
     const [name, setName] = useState("");
-    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "debug">("mainMenu");
+    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "gameV2" | "debug">("mainMenu");
+    const [targetPage, setTargetPage] = useState<"game" | "gameV2">("game");
 
     // Zustand store
     const { game: zustandGame, setGame: setZustandGame, updateGame: updateZustandGame } = useGameStore();
@@ -339,6 +341,7 @@ export default function App() {
     };
 
     const handleStartGame = () => {
+        setTargetPage("game");
         setCurrentPage("login");
     };
 
@@ -369,7 +372,15 @@ export default function App() {
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
-        return <MainMenu onStartGame={handleStartGame} onDebugGame={handleDebugGame} onDebugGameV2={() => setCurrentPage("debug")} />;
+        return <MainMenu 
+            onStartGame={handleStartGame} 
+            onDebugGame={handleDebugGame} 
+            onDebugGameV2={() => setCurrentPage("debug")}
+            onGameV2={() => {
+                setTargetPage("gameV2");
+                setCurrentPage("login");
+            }}
+        />;
     }
 
     // Отображаем страницу входа
@@ -403,7 +414,11 @@ export default function App() {
                         }}
                     />
                     <button
-                        onClick={startNewPlay}
+                        onClick={async () => {
+                            await startNewPlay();
+                            // Переходим в целевую страницу после входа
+                            setCurrentPage(targetPage);
+                        }}
                         disabled={!name}
                         style={{
                             width: "100%",
@@ -425,6 +440,26 @@ export default function App() {
     // Отображаем debug страницу
     if (currentPage === "debug") {
         return <DebugGameBoard onBack={handleBackToMainMenu} />;
+    }
+
+    // Отображаем GameBoardV2
+    if (currentPage === "gameV2") {
+        if (!ready || !myId) {
+            return (
+                <div style={{
+                    width: "100vw",
+                    height: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#0b1020",
+                    color: "#fff",
+                }}>
+                    <div>Загрузка...</div>
+                </div>
+            );
+        }
+        return <GameBoardV2 myId={myId} onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем игру (лобби или игровую доску)
