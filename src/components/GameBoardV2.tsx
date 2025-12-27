@@ -3,9 +3,32 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
 import type { GameState, Card } from "../types";
-// import { CARDS_DATA } from "../engine/cards"; // TODO: будет использоваться для создания игры
+import { CARDS_DATA } from "../engine/cards";
 import DropZone from "./DropZone";
 import DefenseZone from "./DefenseZone";
+
+// Простой генератор псевдослучайных чисел
+class SeededRandom {
+    private seed: number;
+    
+    constructor(seed: number) {
+        this.seed = seed;
+    }
+    
+    next(): number {
+        this.seed = (this.seed * 9301 + 49297) % 233280;
+        return this.seed / 233280;
+    }
+    
+    shuffle<T>(array: T[]): T[] {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(this.next() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+}
 
 interface GameBoardV2Props {
     myId: string;
@@ -134,18 +157,89 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setPlayroomGame(newState);
     };
 
-    // Регистрация игрока при монтировании
+    // Регистрация игрока при монтировании (автоматически)
     useEffect(() => {
         if (myId) {
             updateGame((prev) => {
                 const players = { ...(prev.players || {}) };
-                players[myId] = players[myId] || { name: `Player ${myId.slice(-4)}` };
+                if (!players[myId]) {
+                    players[myId] = { name: `Player ${myId.slice(-4)}` };
+                }
                 const next: GameState = { ...prev, players };
                 if (!prev.hostId) next.hostId = myId;
                 return next;
             });
         }
     }, [myId]);
+
+    // Функция создания игры (как в DebugGameBoardV2)
+    const createGame = () => {
+        const playerIds = Object.keys(game.players || {});
+        if (playerIds.length === 0) {
+            alert('❌ Нет игроков для создания игры!');
+            return;
+        }
+
+        const random = new SeededRandom(Date.now());
+        const shuffledDeck = random.shuffle([...CARDS_DATA]);
+        
+        const hands: GameState["hands"] = {};
+        const turnOrder: string[] = [];
+        
+        // Раздаем карты всем игрокам
+        for (let i = 0; i < playerIds.length; i++) {
+            const playerId = playerIds[i];
+            const playerCards = shuffledDeck.splice(0, 6);
+            hands[playerId] = playerCards;
+            turnOrder.push(playerId);
+        }
+
+        // Определяем первого игрока (самая слабая карта)
+        let weakestPlayer = { playerId: playerIds[0], power: 999 };
+        playerIds.forEach(playerId => {
+            const playerHand = hands[playerId] || [];
+            if (playerHand.length > 0) {
+                const weakestCard = playerHand.reduce((weakest, card) => 
+                    card.power < weakest.power ? card : weakest, playerHand[0]);
+                if (weakestCard.power < weakestPlayer.power) {
+                    weakestPlayer = { playerId, power: weakestCard.power };
+                }
+            }
+        });
+
+        updateGame((prev) => ({
+            ...prev,
+            phase: "playing",
+            hands,
+            slots: new Array(6).fill(null),
+            defenseSlots: new Array(6).fill(null),
+            deck: shuffledDeck,
+            discardPile: [],
+            playerCountAtStart: playerIds.length,
+            startedAt: Date.now(),
+            currentTurn: weakestPlayer.playerId,
+            turnOrder,
+            currentTurnIndex: turnOrder.indexOf(weakestPlayer.playerId),
+            turnPhase: "play",
+            gameInitialized: true,
+            playerRoles: Object.fromEntries(playerIds.map(id => [id, 'observer' as const])),
+        }));
+    };
+
+    // Функция рестарта игры
+    const restartGame = () => {
+        updateGame((prev) => ({
+            ...prev,
+            phase: "lobby",
+            hands: {},
+            slots: [],
+            defenseSlots: [],
+            deck: [],
+            discardPile: [],
+            gameInitialized: false,
+            playerRoles: {},
+        }));
+    };
 
     // Обработчики drag & drop
     const handleDragStart = (event: DragStartEvent) => {
@@ -196,72 +290,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     //     }
     // }, [showSensorCircle, activeCard]);
 
-    // Если игра еще не начата, показываем лобби
-    if (game.phase === "lobby") {
-        return (
-            <div style={{
-                width: "100vw",
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#0b1020",
-                color: "#fff",
-            }}>
-                <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
-                    <h1 style={{ fontSize: 20, marginBottom: 8 }}>Лобби V2</h1>
-                    <div style={{ marginBottom: 8, fontSize: 14, opacity: 0.8 }}>
-                        Игроков: {playerIds.length} / 6
-                    </div>
-                    <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.6 }}>
-                        {Object.entries(game.players || {}).map(([playerId, player]) => (
-                            <div key={playerId} style={{ marginBottom: 4 }}>
-                                {player.name} {playerId === game.hostId ? '👑 (Хост)' : ''}
-                            </div>
-                        ))}
-                    </div>
-                    {myId === game.hostId && (
-                        <button
-                            onClick={() => {
-                                // TODO: Реализовать старт игры
-                                console.log('🎯 Начать игру V2');
-                            }}
-                            style={{
-                                width: "100%",
-                                padding: 10,
-                                borderRadius: 10,
-                                border: 0,
-                                background: playerIds.length >= 2 && playerIds.length <= 6 ? "#10b981" : "#6b7280",
-                                color: "#fff",
-                                cursor: playerIds.length >= 2 && playerIds.length <= 6 ? "pointer" : "not-allowed",
-                                opacity: playerIds.length >= 2 && playerIds.length <= 6 ? 1 : 0.5,
-                            }}
-                            disabled={playerIds.length < 2 || playerIds.length > 6}
-                        >
-                            Начать игру
-                        </button>
-                    )}
-                    {onBack && (
-                        <button
-                            onClick={onBack}
-                            style={{
-                                width: "100%",
-                                marginTop: 10,
-                                padding: 10,
-                                borderRadius: 10,
-                                border: 0,
-                                background: "#6b7280",
-                                color: "#fff",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Назад в меню
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    }
+    // Всегда показываем игровую доску (как в DebugGameBoardV2)
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -287,25 +316,59 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     <div>
                         <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Game Board V2</h2>
                         <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck.length}
+                            Игроков: {playerIds.length} | Карт в руке: {myHand.length} | Слотов на столе: {game.slots?.filter(s => s !== null).length || 0} | Колода: {game.deck.length}
                         </div>
                     </div>
-                    {onBack && (
-                        <button
-                            onClick={onBack}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#8B0000",
-                                border: "none",
-                                borderRadius: "8px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                            }}
-                        >
-                            Назад
-                        </button>
-                    )}
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        {/* Кнопки управления для всех игроков (для тестирования) */}
+                        {game.phase === "lobby" || !game.gameInitialized ? (
+                            <button
+                                onClick={createGame}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "#10b981",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                🚀 Старт
+                            </button>
+                        ) : (
+                            <button
+                                onClick={restartGame}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "#ef4444",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                🔄 Рестарт
+                            </button>
+                        )}
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "#6b7280",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                Назад
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Game Board */}

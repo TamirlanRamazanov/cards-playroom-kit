@@ -376,9 +376,11 @@ export default function App() {
             onStartGame={handleStartGame} 
             onDebugGame={handleDebugGame} 
             onDebugGameV2={() => setCurrentPage("debug")}
-            onGameV2={() => {
-                setTargetPage("gameV2");
-                setCurrentPage("login");
+            onGameV2={async () => {
+                // Сразу подключаемся к PlayroomKit без промежуточных меню
+                await insertCoin();
+                setReady(true);
+                setCurrentPage("gameV2");
             }}
         />;
     }
@@ -442,7 +444,16 @@ export default function App() {
         return <DebugGameBoard onBack={handleBackToMainMenu} />;
     }
 
-    // Отображаем GameBoardV2
+    // Автоматическое подключение для gameV2
+    useEffect(() => {
+        if (currentPage === "gameV2" && !ready) {
+            insertCoin().then(() => {
+                setReady(true);
+            });
+        }
+    }, [currentPage, ready]);
+
+    // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)
     if (currentPage === "gameV2") {
         if (!ready || !myId) {
             return (
@@ -455,7 +466,7 @@ export default function App() {
                     background: "#0b1020",
                     color: "#fff",
                 }}>
-                    <div>Загрузка...</div>
+                    <div>Подключение к комнате...</div>
                 </div>
             );
         }
