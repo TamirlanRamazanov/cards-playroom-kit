@@ -367,6 +367,15 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ready, name]);
 
+    // Автоматическое подключение для gameV2 - ВСЕГДА вызываем ДО условных return'ов
+    useEffect(() => {
+        if (currentPage === "gameV2" && !ready) {
+            insertCoin().then(() => {
+                setReady(true);
+            });
+        }
+    }, [currentPage, ready]);
+
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
         return <MainMenu 
@@ -442,15 +451,6 @@ export default function App() {
     if (currentPage === "debug") {
         return <DebugGameBoard onBack={handleBackToMainMenu} />;
     }
-
-    // Автоматическое подключение для gameV2
-    useEffect(() => {
-        if (currentPage === "gameV2" && !ready) {
-            insertCoin().then(() => {
-                setReady(true);
-            });
-        }
-    }, [currentPage, ready]);
 
     // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)
     if (currentPage === "gameV2") {
