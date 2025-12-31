@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
@@ -133,8 +133,36 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     // const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
 
-    // НЕ регистрируем игроков автоматически - они добавляются через PlayroomKit
-    // Просто показываем тех кто уже есть в gameState
+    // Регистрируем игрока при подключении (как в App.tsx)
+    useEffect(() => {
+        if (!myId) return;
+        if (!gameState) return;
+        
+        // Проверяем, зарегистрирован ли игрок
+        const players = gameState.players || {};
+        if (players[myId]) {
+            // Игрок уже зарегистрирован
+            return;
+        }
+        
+        // Регистрируем игрока в gameState
+        const newPlayers = { ...players };
+        newPlayers[myId] = { name: `Player ${myId.slice(-4)}` };
+        console.log(`✅ Игрок ${myId} зарегистрирован в GameBoardV2`);
+        
+        const next: GameState = { 
+            ...gameState, 
+            players: newPlayers,
+            // Назначаем хоста, если его еще нет
+            hostId: gameState.hostId || myId,
+        };
+        
+        if (!gameState.hostId) {
+            console.log(`👑 Игрок ${myId} назначен хостом`);
+        }
+        
+        setPlayroomGame(next);
+    }, [myId, gameState, setPlayroomGame]);
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
