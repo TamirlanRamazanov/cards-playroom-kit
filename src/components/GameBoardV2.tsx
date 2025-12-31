@@ -87,8 +87,26 @@ interface GameBoardV2Props {
 }
 
 const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
+    // ВСЕГДА вызываем хуки на верхнем уровне - это критично для React
     // PlayroomKit для синхронизации - используем константу вместо функции
     const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", INITIAL_GAME_STATE);
+    
+    // Если myId пустой, показываем loading
+    if (!myId) {
+        return (
+            <div style={{
+                width: "100vw",
+                height: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#0b1020",
+                color: "#fff",
+            }}>
+                <div>Подключение к комнате...</div>
+            </div>
+        );
+    }
 
     // Локальные UI состояния (как в DebugGameBoardV2)
     const currentPlayerId = myId; // Используем myId напрямую

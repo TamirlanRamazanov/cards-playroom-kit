@@ -452,23 +452,10 @@ export default function App() {
     }, [currentPage, ready]);
 
     // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)
+    // ВСЕГДА рендерим компонент, чтобы хуки вызывались стабильно
     if (currentPage === "gameV2") {
-        if (!ready || !myId) {
-            return (
-                <div style={{
-                    width: "100vw",
-                    height: "100vh",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#0b1020",
-                    color: "#fff",
-                }}>
-                    <div>Подключение к комнате...</div>
-                </div>
-            );
-        }
-        return <GameBoardV2 myId={myId} onBack={handleBackToMainMenu} />;
+        // Передаем myId или пустую строку, компонент сам обработает loading
+        return <GameBoardV2 myId={myId || ""} onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем игру (лобби или игровую доску)
