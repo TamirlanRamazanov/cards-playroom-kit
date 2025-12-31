@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
@@ -112,23 +112,34 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
 
     // Автоматически добавляем игрока в состояние при подключении
+    // Используем useRef чтобы выполнить только один раз
+    const playerAddedRef = useRef(false);
+    
     useEffect(() => {
-        if (!myId || !gameState) return;
+        if (!myId || playerAddedRef.current) return;
         
-        const players = { ...(gameState.players || {}) };
+        // Читаем gameState внутри useEffect, но не добавляем в зависимости
+        const currentState = gameState;
+        if (!currentState) return;
+        
+        const players = { ...(currentState.players || {}) };
         if (!players[myId]) {
             players[myId] = { name: `Player ${myId.slice(-4)}` };
             setGameState({
-                ...gameState,
+                ...currentState,
                 players,
-                hostId: gameState.hostId || myId,
+                hostId: currentState.hostId || myId,
             });
+            playerAddedRef.current = true;
+        } else {
+            playerAddedRef.current = true;
         }
-    }, [myId, gameState, setGameState]);
+    }, [myId, setGameState]); // Только myId и setGameState (стабильная функция)
 
     // Синхронизация defenseCards
     useEffect(() => {
-        const globalDefense = gameState?.defenseSlots || [];
+        if (!gameState) return;
+        const globalDefense = gameState.defenseSlots || [];
         setDefenseCards(globalDefense);
     }, [gameState?.defenseSlots]);
 
