@@ -97,11 +97,12 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     const [defenseCards, setDefenseCards] = useState<(Card | null)[]>([]);
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
-    const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
-    const [showSensorCircle, setShowSensorCircle] = useState<boolean>(false);
-    const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
-    const [dropZoneTimeout, setDropZoneTimeout] = useState<number | null>(null);
-    const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
+    // TODO: Будут использоваться позже при реализации полной логики
+    // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+    // const [showSensorCircle, setShowSensorCircle] = useState<boolean>(false);
+    // const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
+    // const [dropZoneTimeout, setDropZoneTimeout] = useState<number | null>(null);
+    // const [invalidDefenseCard, setInvalidDefenseCard] = useState<number | null>(null);
     // TODO: Будут использоваться позже при реализации полной логики
     // const [canTakeCards, setCanTakeCards] = useState<boolean>(false);
     // const [factionCounter, setFactionCounter] = useState<Record<number, number>>({});
