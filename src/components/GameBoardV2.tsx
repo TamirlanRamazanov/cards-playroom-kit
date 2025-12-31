@@ -3,7 +3,7 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
 import type { GameState, Card } from "../types";
-import { CARDS_DATA, FACTIONS } from "../engine/cards";
+import { CARDS_DATA } from "../engine/cards";
 import DropZone from "./DropZone";
 import DefenseZone from "./DefenseZone";
 
@@ -91,9 +91,10 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", createInitialGameState());
 
     // Локальные UI состояния (как в DebugGameBoardV2)
-    const [currentPlayerId, setCurrentPlayerId] = useState<string>(myId);
+    const currentPlayerId = myId; // Используем myId напрямую
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
-    const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
+    // TODO: gameMode будет использоваться позже
+    // const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
     const [defenseCards, setDefenseCards] = useState<(Card | null)[]>([]);
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
