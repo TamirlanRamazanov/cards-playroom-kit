@@ -88,12 +88,17 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     });
 
     // Используем PlayroomKit game как источник истины
+    // Если playroomGame еще не загружен, используем начальное состояние
     const game = playroomGame || {
-        phase: "lobby",
+        phase: "lobby" as const,
+        hostId: undefined,
         players: {},
         hands: {},
         slots: [],
         defenseSlots: [],
+        playerCountAtStart: undefined,
+        winnerId: undefined,
+        startedAt: undefined,
         deck: [],
         discardPile: [],
         maxHandSize: 6,
@@ -102,6 +107,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         availableTargets: [],
         factionBonuses: {},
         targetSelectionMode: false,
+        selectedTarget: undefined,
         factionEffects: {},
         activeFactions: [],
         factionCounter: {},
@@ -121,7 +127,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         },
         turnHistory: [],
         playerRoles: {},
-        attackPriority: 'attacker',
+        attackPriority: 'attacker' as const,
         mainAttackerHasPlayed: false,
         attackerPassed: false,
         coAttackerPassed: false,
@@ -162,22 +168,88 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
     // Регистрация игрока при монтировании (автоматически)
     useEffect(() => {
-        if (myId) {
-            updateGame((prev) => {
-                const players = { ...(prev.players || {}) };
-                if (!players[myId]) {
-                    players[myId] = { name: `Player ${myId.slice(-4)}` };
-                }
-                const next: GameState = { ...prev, players };
-                if (!prev.hostId) next.hostId = myId;
-                return next;
-            });
+        if (!myId) return;
+        
+        // Используем актуальное состояние из playroomGame
+        const currentGame = playroomGame;
+        if (!currentGame) {
+            // Если playroomGame еще не загружен, инициализируем его
+            const initialGame: GameState = {
+                phase: "lobby",
+                hostId: myId,
+                players: { [myId]: { name: `Player ${myId.slice(-4)}` } },
+                hands: {},
+                slots: [],
+                defenseSlots: [],
+                playerCountAtStart: undefined,
+                winnerId: undefined,
+                startedAt: undefined,
+                deck: [],
+                discardPile: [],
+                maxHandSize: 6,
+                cardsDrawnThisTurn: {},
+                canDrawCards: true,
+                availableTargets: [],
+                factionBonuses: {},
+                targetSelectionMode: false,
+                selectedTarget: undefined,
+                factionEffects: {},
+                activeFactions: [],
+                factionCounter: {},
+                activeFirstAttackFactions: [],
+                usedDefenseCardFactions: {},
+                displayActiveFactions: [],
+                defenseFactionsBuffer: {},
+                minCardPower: 50,
+                maxCardPower: 100,
+                canDefendWithEqualPower: true,
+                turnActions: {
+                    canEndTurn: false,
+                    canPass: false,
+                    canTakeCards: false,
+                    canAttack: false,
+                    canDefend: false,
+                },
+                turnHistory: [],
+                playerRoles: {},
+                attackPriority: 'attacker',
+                mainAttackerHasPlayed: false,
+                attackerPassed: false,
+                coAttackerPassed: false,
+                attackerBitoPressed: false,
+                coAttackerBitoPressed: false,
+                attackerPasPressed: false,
+                coAttackerPasPressed: false,
+                drawQueue: [],
+                gameInitialized: false,
+            };
+            setPlayroomGame(initialGame);
+            console.log('🎯 Инициализировано начальное состояние для игрока:', myId);
+            return;
         }
-    }, [myId]);
+        
+        // Регистрируем игрока, если его еще нет
+        const players = { ...(currentGame.players || {}) };
+        if (!players[myId]) {
+            players[myId] = { name: `Player ${myId.slice(-4)}` };
+            const newGame: GameState = {
+                ...currentGame,
+                players,
+                hostId: currentGame.hostId || myId,
+            };
+            setPlayroomGame(newGame);
+            console.log('🎯 Игрок зарегистрирован:', myId);
+        }
+    }, [myId, playroomGame, setPlayroomGame]);
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
-        const playerIds = Object.keys(game.players || {});
+        // Используем актуальное состояние из playroomGame
+        const currentGameState = playroomGame || game;
+        const playerIds = Object.keys(currentGameState.players || {});
+        
+        console.log('🎯 Создание игры. Игроки:', playerIds, 'Текущее состояние:', currentGameState);
+        
         if (playerIds.length === 0) {
             alert('❌ Нет игроков для создания игры!');
             return;
@@ -210,8 +282,9 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             }
         });
 
-        updateGame((prev) => ({
-            ...prev,
+        // Создаем новое состояние игры
+        const newGameState: GameState = {
+            ...currentGameState,
             phase: "playing",
             hands,
             slots: new Array(6).fill(null),
@@ -226,7 +299,16 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             turnPhase: "play",
             gameInitialized: true,
             playerRoles: Object.fromEntries(playerIds.map(id => [id, 'observer' as const])),
-        }));
+        };
+        
+        console.log('🎯 Игра создана:', { 
+            players: playerIds.length, 
+            cardsInDeck: shuffledDeck.length,
+            firstPlayer: weakestPlayer.playerId,
+            hands: Object.keys(hands).length
+        });
+        
+        setPlayroomGame(newGameState);
     };
 
     // Функция рестарта игры
@@ -294,6 +376,17 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // }, [showSensorCircle, activeCard]);
 
     // Всегда показываем игровую доску (как в DebugGameBoardV2)
+    // Логирование для отладки
+    useEffect(() => {
+        console.log('🎯 GameBoardV2 состояние:', {
+            myId,
+            playroomGameExists: !!playroomGame,
+            phase: game.phase,
+            playersCount: Object.keys(game.players || {}).length,
+            myHandLength: myHand.length,
+            slotsCount: game.slots?.length || 0,
+        });
+    }, [myId, playroomGame, game.phase, game.players, myHand.length, game.slots]);
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -382,6 +475,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         <DropZone
                             id="attack-table"
                             cards={game.slots || []}
+                            minVisibleCards={1}
                             onCardHover={setHoveredAttackCard}
                             highlightedCardIndex={hoveredAttackCard}
                         />
