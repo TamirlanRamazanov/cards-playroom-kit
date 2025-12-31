@@ -111,30 +111,24 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     // const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
 
-    // Автоматически добавляем игрока в состояние при подключении
-    // Используем useRef чтобы выполнить только один раз
-    const playerAddedRef = useRef(false);
+    // Автоматически добавляем игрока - используем useRef для отслеживания
+    const playerAddedRef = useRef<string | null>(null);
     
-    useEffect(() => {
-        if (!myId || playerAddedRef.current) return;
-        
-        // Читаем gameState внутри useEffect, но не добавляем в зависимости
-        const currentState = gameState;
-        if (!currentState) return;
-        
-        const players = { ...(currentState.players || {}) };
+    // Добавляем игрока только один раз при первом появлении myId
+    if (myId && playerAddedRef.current !== myId && gameState) {
+        const players = { ...(gameState.players || {}) };
         if (!players[myId]) {
             players[myId] = { name: `Player ${myId.slice(-4)}` };
             setGameState({
-                ...currentState,
+                ...gameState,
                 players,
-                hostId: currentState.hostId || myId,
+                hostId: gameState.hostId || myId,
             });
-            playerAddedRef.current = true;
+            playerAddedRef.current = myId;
         } else {
-            playerAddedRef.current = true;
+            playerAddedRef.current = myId;
         }
-    }, [myId, setGameState]); // Только myId и setGameState (стабильная функция)
+    }
 
     // Синхронизация defenseCards
     useEffect(() => {
