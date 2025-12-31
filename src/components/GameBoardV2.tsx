@@ -152,8 +152,11 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     const playerIds = Object.keys(game.players || {});
 
     // Функция для обновления игры (синхронизирует с PlayroomKit)
+    // Используем актуальное состояние из playroomGame для предотвращения stale closures
     const updateGame = (fn: (prev: GameState) => GameState) => {
-        const newState = fn(game);
+        // Всегда используем актуальное состояние из PlayroomKit
+        const currentGame = playroomGame || game;
+        const newState = fn(currentGame);
         setPlayroomGame(newState);
     };
 
