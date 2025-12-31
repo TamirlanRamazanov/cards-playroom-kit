@@ -99,56 +99,8 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
     
-    // Используем PlayroomKit game как источник истины с fallback (как в старом коммите)
-    const gameState = playroomGame || {
-        phase: "lobby" as const,
-        hostId: undefined,
-        players: {},
-        hands: {},
-        slots: [null, null, null, null, null, null],
-        defenseSlots: [null, null, null, null, null, null],
-        playerCountAtStart: undefined,
-        winnerId: undefined,
-        startedAt: undefined,
-        deck: [],
-        discardPile: [],
-        maxHandSize: 6,
-        cardsDrawnThisTurn: {},
-        canDrawCards: true,
-        availableTargets: [],
-        factionBonuses: {},
-        targetSelectionMode: false,
-        selectedTarget: undefined,
-        factionEffects: {},
-        activeFactions: [],
-        factionCounter: {},
-        activeFirstAttackFactions: [],
-        usedDefenseCardFactions: {},
-        displayActiveFactions: [],
-        defenseFactionsBuffer: {},
-        minCardPower: 50,
-        maxCardPower: 100,
-        canDefendWithEqualPower: true,
-        turnActions: {
-            canEndTurn: false,
-            canPass: false,
-            canTakeCards: false,
-            canAttack: false,
-            canDefend: false,
-        },
-        turnHistory: [],
-        playerRoles: {},
-        attackPriority: 'attacker' as const,
-        mainAttackerHasPlayed: false,
-        attackerPassed: false,
-        coAttackerPassed: false,
-        attackerBitoPressed: false,
-        coAttackerBitoPressed: false,
-        attackerPasPressed: false,
-        coAttackerPasPressed: false,
-        drawQueue: [],
-        gameInitialized: false,
-    };
+    // Используем PlayroomKit game как источник истины с fallback (используем константу)
+    const gameState = playroomGame || INITIAL_GAME_STATE;
     
     // Если myId пустой, показываем loading ПОСЛЕ всех хуков
     if (!myId) {
