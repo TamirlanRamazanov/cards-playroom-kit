@@ -166,73 +166,16 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setPlayroomGame(newState);
     };
 
-    // Регистрация игрока при монтировании (автоматически)
-    // Используем useRef для отслеживания, был ли игрок уже зарегистрирован
+    // Регистрация игрока - используем useEffect только с myId
     const hasRegisteredRef = useRef(false);
     
     useEffect(() => {
         if (!myId || hasRegisteredRef.current) return;
         
-        // Используем актуальное состояние из playroomGame
+        // Используем актуальное состояние из playroomGame, но не добавляем в зависимости
         const currentGame = playroomGame;
-        if (!currentGame) {
-            // Если playroomGame еще не загружен, инициализируем его
-            const initialGame: GameState = {
-                phase: "lobby",
-                hostId: myId,
-                players: { [myId]: { name: `Player ${myId.slice(-4)}` } },
-                hands: {},
-                slots: [],
-                defenseSlots: [],
-                playerCountAtStart: undefined,
-                winnerId: undefined,
-                startedAt: undefined,
-                deck: [],
-                discardPile: [],
-                maxHandSize: 6,
-                cardsDrawnThisTurn: {},
-                canDrawCards: true,
-                availableTargets: [],
-                factionBonuses: {},
-                targetSelectionMode: false,
-                selectedTarget: undefined,
-                factionEffects: {},
-                activeFactions: [],
-                factionCounter: {},
-                activeFirstAttackFactions: [],
-                usedDefenseCardFactions: {},
-                displayActiveFactions: [],
-                defenseFactionsBuffer: {},
-                minCardPower: 50,
-                maxCardPower: 100,
-                canDefendWithEqualPower: true,
-                turnActions: {
-                    canEndTurn: false,
-                    canPass: false,
-                    canTakeCards: false,
-                    canAttack: false,
-                    canDefend: false,
-                },
-                turnHistory: [],
-                playerRoles: {},
-                attackPriority: 'attacker',
-                mainAttackerHasPlayed: false,
-                attackerPassed: false,
-                coAttackerPassed: false,
-                attackerBitoPressed: false,
-                coAttackerBitoPressed: false,
-                attackerPasPressed: false,
-                coAttackerPasPressed: false,
-                drawQueue: [],
-                gameInitialized: false,
-            };
-            setPlayroomGame(initialGame);
-            hasRegisteredRef.current = true;
-            console.log('🎯 Инициализировано начальное состояние для игрока:', myId);
-            return;
-        }
+        if (!currentGame) return; // Ждем, пока playroomGame загрузится
         
-        // Регистрируем игрока, если его еще нет
         const players = { ...(currentGame.players || {}) };
         if (!players[myId]) {
             players[myId] = { name: `Player ${myId.slice(-4)}` };
@@ -247,7 +190,26 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         } else {
             hasRegisteredRef.current = true;
         }
-    }, [myId]); // Убрали playroomGame и setPlayroomGame из зависимостей, чтобы избежать циклов
+    }, [myId]); // Только myId в зависимостях
+    
+    // Отдельный useEffect для проверки playroomGame
+    useEffect(() => {
+        if (!myId || hasRegisteredRef.current || !playroomGame) return;
+        
+        const currentGame = playroomGame;
+        const players = { ...(currentGame.players || {}) };
+        if (!players[myId]) {
+            players[myId] = { name: `Player ${myId.slice(-4)}` };
+            const newGame: GameState = {
+                ...currentGame,
+                players,
+                hostId: currentGame.hostId || myId,
+            };
+            setPlayroomGame(newGame);
+            hasRegisteredRef.current = true;
+            console.log('🎯 Игрок зарегистрирован (второй useEffect):', myId);
+        }
+    }, [playroomGame, myId]);
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
