@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
@@ -30,8 +30,8 @@ class SeededRandom {
     }
 }
 
-// Начальное состояние игры
-const createInitialGameState = (): GameState => ({
+// Начальное состояние игры - вынесено за пределы компонента
+const INITIAL_GAME_STATE: GameState = {
     phase: "lobby",
     hostId: undefined,
     players: {},
@@ -79,7 +79,7 @@ const createInitialGameState = (): GameState => ({
     coAttackerPasPressed: false,
     drawQueue: [],
     gameInitialized: false,
-});
+};
 
 interface GameBoardV2Props {
     myId: string;
@@ -87,15 +87,15 @@ interface GameBoardV2Props {
 }
 
 const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
-    // PlayroomKit для синхронизации - простое состояние без регистрации
-    const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", createInitialGameState());
+    // PlayroomKit для синхронизации - используем константу вместо функции
+    const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", INITIAL_GAME_STATE);
 
     // Локальные UI состояния (как в DebugGameBoardV2)
     const currentPlayerId = myId; // Используем myId напрямую
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
     // TODO: gameMode будет использоваться позже
     // const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
-    const [defenseCards, setDefenseCards] = useState<(Card | null)[]>([]);
+    // Используем gameState.defenseSlots напрямую, без локального состояния
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
     // TODO: Будут использоваться позже при реализации полной логики
@@ -113,13 +113,6 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
     // НЕ регистрируем игроков автоматически - они добавляются через PlayroomKit
     // Просто показываем тех кто уже есть в gameState
-
-    // Синхронизация defenseCards
-    useEffect(() => {
-        if (!gameState) return;
-        const globalDefense = gameState.defenseSlots || [];
-        setDefenseCards(globalDefense);
-    }, [gameState?.defenseSlots]);
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
@@ -182,7 +175,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // Функция рестарта игры
     const restartGame = () => {
         if (!gameState) return;
-        setGameState(createInitialGameState());
+        setGameState(INITIAL_GAME_STATE);
     };
 
     // Обработчики drag & drop (базовая версия)
@@ -214,12 +207,10 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setActiveCard(null);
     };
 
-    if (!gameState) {
-        return <div>Загрузка...</div>;
-    }
-
-    const myHand = gameState.hands[currentPlayerId] || [];
-    const playerIds = Object.keys(gameState.players || {});
+    // Всегда используем gameState (даже если он undefined, используем fallback)
+    const safeGameState = gameState || INITIAL_GAME_STATE;
+    const myHand = safeGameState.hands[currentPlayerId] || [];
+    const playerIds = Object.keys(safeGameState.players || {});
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -245,11 +236,11 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     <div>
                         <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Game Board V2</h2>
                         <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Игроков: {playerIds.length} | Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length}
+                            Игроков: {playerIds.length} | Карт в руке: {myHand.length} | Слотов на столе: {safeGameState.slots?.filter(s => s !== null).length || 0} | Колода: {safeGameState.deck.length}
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                        {gameState.phase === "lobby" || !gameState.gameInitialized ? (
+                        {safeGameState.phase === "lobby" || !safeGameState.gameInitialized ? (
                             <button
                                 onClick={createGame}
                                 style={{
@@ -306,7 +297,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         <h3 style={{ marginBottom: "10px" }}>Стол атаки</h3>
                         <DropZone
                             id="attack-table"
-                            cards={gameState.slots || []}
+                            cards={safeGameState.slots || []}
                             minVisibleCards={1}
                             onCardHover={setHoveredAttackCard}
                             highlightedCardIndex={hoveredAttackCard}
@@ -317,8 +308,8 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     <div style={{ marginBottom: "20px" }}>
                         <h3 style={{ marginBottom: "10px" }}>Защита</h3>
                         <DefenseZone
-                            attackCards={gameState.slots || []}
-                            defenseCards={defenseCards}
+                            attackCards={safeGameState.slots || []}
+                            defenseCards={safeGameState.defenseSlots || []}
                             onCardHover={setHoveredDefenseCard}
                             highlightedCardIndex={hoveredDefenseCard}
                         />
