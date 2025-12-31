@@ -111,24 +111,8 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     // const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
 
-    // Автоматически добавляем игрока - используем useRef для отслеживания
-    const playerAddedRef = useRef<string | null>(null);
-    
-    // Добавляем игрока через useEffect с минимальными зависимостями
-    useEffect(() => {
-        if (!myId || playerAddedRef.current === myId || !gameState) return;
-        
-        const players = { ...(gameState.players || {}) };
-        if (!players[myId]) {
-            players[myId] = { name: `Player ${myId.slice(-4)}` };
-            setGameState({
-                ...gameState,
-                players,
-                hostId: gameState.hostId || myId,
-            });
-        }
-        playerAddedRef.current = myId;
-    }, [myId]); // Только myId - gameState читаем внутри, но не добавляем в зависимости
+    // НЕ регистрируем игроков автоматически - они добавляются через PlayroomKit
+    // Просто показываем тех кто уже есть в gameState
 
     // Синхронизация defenseCards
     useEffect(() => {
