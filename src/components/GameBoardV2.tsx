@@ -423,7 +423,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         <h3 style={{ marginBottom: "10px" }}>Защита</h3>
                         <DefenseZone
                             attackCards={gameState.slots || []}
-                            defenseCards={safeGameState.defenseSlots || []}
+                            defenseCards={gameState.defenseSlots || []}
                             onCardHover={setHoveredDefenseCard}
                             highlightedCardIndex={hoveredDefenseCard}
                         />
