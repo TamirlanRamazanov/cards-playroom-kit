@@ -334,11 +334,7 @@ export default function App() {
         });
     };
 
-    const startNewPlay = async () => {
-        await insertCoin();
-        setReady(true);
-        setCurrentPage("game");
-    };
+    // startNewPlay удалена, используется прямой вызов insertCoin в кнопке Launch
 
     const handleStartGame = () => {
         setTargetPage("game");
@@ -377,10 +373,9 @@ export default function App() {
             onDebugGame={handleDebugGame} 
             onDebugGameV2={() => setCurrentPage("debug")}
             onGameV2={async () => {
-                // Сразу подключаемся к PlayroomKit без промежуточных меню
-                await insertCoin();
-                setReady(true);
-                setCurrentPage("gameV2");
+                // Устанавливаем целевую страницу и переходим на страницу входа
+                setTargetPage("gameV2");
+                setCurrentPage("login");
             }}
         />;
     }
@@ -417,8 +412,11 @@ export default function App() {
                     />
                     <button
                         onClick={async () => {
-                            await startNewPlay();
+                            console.log('🎯 Launch нажата, targetPage:', targetPage);
+                            await insertCoin();
+                            setReady(true);
                             // Переходим в целевую страницу после входа
+                            console.log('🎯 Переход на страницу:', targetPage);
                             setCurrentPage(targetPage);
                         }}
                         disabled={!name}
@@ -432,7 +430,7 @@ export default function App() {
                             cursor: name ? "pointer" : "not-allowed",
                         }}
                     >
-                        New Play
+                        Launch
                     </button>
                 </div>
             </div>
