@@ -102,6 +102,37 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // Используем PlayroomKit game как источник истины с fallback (используем константу)
     const gameState = playroomGame || INITIAL_GAME_STATE;
     
+    // Регистрируем игрока при подключении (как в App.tsx) - ВСЕГДА ДО условного return
+    useEffect(() => {
+        if (!myId) return;
+        if (!gameState) return;
+        
+        // Проверяем, зарегистрирован ли игрок
+        const players = gameState.players || {};
+        if (players[myId]) {
+            // Игрок уже зарегистрирован
+            return;
+        }
+        
+        // Регистрируем игрока в gameState
+        const newPlayers = { ...players };
+        newPlayers[myId] = { name: `Player ${myId.slice(-4)}` };
+        console.log(`✅ Игрок ${myId} зарегистрирован в GameBoardV2`);
+        
+        const next: GameState = { 
+            ...gameState, 
+            players: newPlayers,
+            // Назначаем хоста, если его еще нет
+            hostId: gameState.hostId || myId,
+        };
+        
+        if (!gameState.hostId) {
+            console.log(`👑 Игрок ${myId} назначен хостом`);
+        }
+        
+        setPlayroomGame(next);
+    }, [myId, gameState, setPlayroomGame]);
+    
     // Если myId пустой, показываем loading ПОСЛЕ всех хуков
     if (!myId) {
         return (
@@ -132,37 +163,6 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // const [defenseFactionsBuffer, setDefenseFactionsBuffer] = useState<Record<number, number>>({});
     // const [activeFirstAttackFactions, setActiveFirstAttackFactions] = useState<number[]>([]);
     // const [usedDefenseCardFactions, setUsedDefenseCardFactions] = useState<Record<string, number[]>>({});
-
-    // Регистрируем игрока при подключении (как в App.tsx)
-    useEffect(() => {
-        if (!myId) return;
-        if (!gameState) return;
-        
-        // Проверяем, зарегистрирован ли игрок
-        const players = gameState.players || {};
-        if (players[myId]) {
-            // Игрок уже зарегистрирован
-            return;
-        }
-        
-        // Регистрируем игрока в gameState
-        const newPlayers = { ...players };
-        newPlayers[myId] = { name: `Player ${myId.slice(-4)}` };
-        console.log(`✅ Игрок ${myId} зарегистрирован в GameBoardV2`);
-        
-        const next: GameState = { 
-            ...gameState, 
-            players: newPlayers,
-            // Назначаем хоста, если его еще нет
-            hostId: gameState.hostId || myId,
-        };
-        
-        if (!gameState.hostId) {
-            console.log(`👑 Игрок ${myId} назначен хостом`);
-        }
-        
-        setPlayroomGame(next);
-    }, [myId, gameState, setPlayroomGame]);
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
