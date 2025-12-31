@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
@@ -167,8 +167,11 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     };
 
     // Регистрация игрока при монтировании (автоматически)
+    // Используем useRef для отслеживания, был ли игрок уже зарегистрирован
+    const hasRegisteredRef = useRef(false);
+    
     useEffect(() => {
-        if (!myId) return;
+        if (!myId || hasRegisteredRef.current) return;
         
         // Используем актуальное состояние из playroomGame
         const currentGame = playroomGame;
@@ -224,6 +227,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 gameInitialized: false,
             };
             setPlayroomGame(initialGame);
+            hasRegisteredRef.current = true;
             console.log('🎯 Инициализировано начальное состояние для игрока:', myId);
             return;
         }
@@ -238,9 +242,12 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 hostId: currentGame.hostId || myId,
             };
             setPlayroomGame(newGame);
+            hasRegisteredRef.current = true;
             console.log('🎯 Игрок зарегистрирован:', myId);
+        } else {
+            hasRegisteredRef.current = true;
         }
-    }, [myId, playroomGame, setPlayroomGame]);
+    }, [myId]); // Убрали playroomGame и setPlayroomGame из зависимостей, чтобы избежать циклов
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
