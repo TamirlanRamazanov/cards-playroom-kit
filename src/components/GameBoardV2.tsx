@@ -30,56 +30,7 @@ class SeededRandom {
     }
 }
 
-// Начальное состояние игры - вынесено за пределы компонента
-const INITIAL_GAME_STATE: GameState = {
-    phase: "lobby",
-    hostId: undefined,
-    players: {},
-    hands: {},
-    slots: [null, null, null, null, null, null],
-    defenseSlots: [null, null, null, null, null, null],
-    playerCountAtStart: undefined,
-    winnerId: undefined,
-    startedAt: undefined,
-    deck: [],
-    discardPile: [],
-    maxHandSize: 6,
-    cardsDrawnThisTurn: {},
-    canDrawCards: true,
-    availableTargets: [],
-    factionBonuses: {},
-    targetSelectionMode: false,
-    selectedTarget: undefined,
-    factionEffects: {},
-    activeFactions: [],
-    factionCounter: {},
-    activeFirstAttackFactions: [],
-    usedDefenseCardFactions: {},
-    displayActiveFactions: [],
-    defenseFactionsBuffer: {},
-    minCardPower: 50,
-    maxCardPower: 100,
-    canDefendWithEqualPower: true,
-    turnActions: {
-        canEndTurn: false,
-        canPass: false,
-        canTakeCards: false,
-        canAttack: false,
-        canDefend: false,
-    },
-    turnHistory: [],
-    playerRoles: {},
-    attackPriority: 'attacker',
-    mainAttackerHasPlayed: false,
-    attackerPassed: false,
-    coAttackerPassed: false,
-    attackerBitoPressed: false,
-    coAttackerBitoPressed: false,
-    attackerPasPressed: false,
-    coAttackerPasPressed: false,
-    drawQueue: [],
-    gameInitialized: false,
-};
+// Убрал константу - используем объект напрямую в useMultiplayerState как в старом коммите
 
 interface GameBoardV2Props {
     myId: string;
@@ -88,17 +39,113 @@ interface GameBoardV2Props {
 
 const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // ВСЕГДА вызываем ВСЕ хуки на верхнем уровне БЕЗ УСЛОВИЙ - это критично для React
-    // PlayroomKit для синхронизации - используем константу вместо функции
-    const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", INITIAL_GAME_STATE);
+    // PlayroomKit для синхронизации - используем объект напрямую как в старом коммите
+    const [playroomGame, setPlayroomGame] = useMultiplayerState<GameState>("gameV2", {
+        phase: "lobby",
+        hostId: undefined,
+        players: {},
+        hands: {},
+        slots: [null, null, null, null, null, null],
+        defenseSlots: [null, null, null, null, null, null],
+        playerCountAtStart: undefined,
+        winnerId: undefined,
+        startedAt: undefined,
+        deck: [],
+        discardPile: [],
+        maxHandSize: 6,
+        cardsDrawnThisTurn: {},
+        canDrawCards: true,
+        availableTargets: [],
+        factionBonuses: {},
+        targetSelectionMode: false,
+        selectedTarget: undefined,
+        factionEffects: {},
+        activeFactions: [],
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        defenseFactionsBuffer: {},
+        minCardPower: 50,
+        maxCardPower: 100,
+        canDefendWithEqualPower: true,
+        turnActions: {
+            canEndTurn: false,
+            canPass: false,
+            canTakeCards: false,
+            canAttack: false,
+            canDefend: false,
+        },
+        turnHistory: [],
+        playerRoles: {},
+        attackPriority: 'attacker',
+        mainAttackerHasPlayed: false,
+        attackerPassed: false,
+        coAttackerPassed: false,
+        attackerBitoPressed: false,
+        coAttackerBitoPressed: false,
+        attackerPasPressed: false,
+        coAttackerPasPressed: false,
+        drawQueue: [],
+        gameInitialized: false,
+    });
     
     // Локальные UI состояния (как в DebugGameBoardV2) - ВСЕГДА вызываем
-    const currentPlayerId = myId || ""; // Используем myId напрямую
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
-    // TODO: gameMode будет использоваться позже
-    // const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
     // Используем gameState.defenseSlots напрямую, без локального состояния
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
+    
+    // Используем PlayroomKit game как источник истины с fallback (как в старом коммите)
+    const gameState = playroomGame || {
+        phase: "lobby" as const,
+        hostId: undefined,
+        players: {},
+        hands: {},
+        slots: [null, null, null, null, null, null],
+        defenseSlots: [null, null, null, null, null, null],
+        playerCountAtStart: undefined,
+        winnerId: undefined,
+        startedAt: undefined,
+        deck: [],
+        discardPile: [],
+        maxHandSize: 6,
+        cardsDrawnThisTurn: {},
+        canDrawCards: true,
+        availableTargets: [],
+        factionBonuses: {},
+        targetSelectionMode: false,
+        selectedTarget: undefined,
+        factionEffects: {},
+        activeFactions: [],
+        factionCounter: {},
+        activeFirstAttackFactions: [],
+        usedDefenseCardFactions: {},
+        displayActiveFactions: [],
+        defenseFactionsBuffer: {},
+        minCardPower: 50,
+        maxCardPower: 100,
+        canDefendWithEqualPower: true,
+        turnActions: {
+            canEndTurn: false,
+            canPass: false,
+            canTakeCards: false,
+            canAttack: false,
+            canDefend: false,
+        },
+        turnHistory: [],
+        playerRoles: {},
+        attackPriority: 'attacker' as const,
+        mainAttackerHasPlayed: false,
+        attackerPassed: false,
+        coAttackerPassed: false,
+        attackerBitoPressed: false,
+        coAttackerBitoPressed: false,
+        attackerPasPressed: false,
+        coAttackerPasPressed: false,
+        drawQueue: [],
+        gameInitialized: false,
+    };
     
     // Если myId пустой, показываем loading ПОСЛЕ всех хуков
     if (!myId) {
@@ -116,6 +163,8 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             </div>
         );
     }
+    
+    const currentPlayerId = myId;
     // TODO: Будут использоваться позже при реализации полной логики
     // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     // const [showSensorCircle, setShowSensorCircle] = useState<boolean>(false);
@@ -187,13 +236,61 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             playerRoles: Object.fromEntries(playerIds.map(id => [id, 'observer' as const])),
         };
         
-        setGameState(newGameState);
+        setPlayroomGame(newGameState);
     };
 
     // Функция рестарта игры
     const restartGame = () => {
         if (!gameState) return;
-        setGameState(INITIAL_GAME_STATE);
+        setPlayroomGame({
+            phase: "lobby",
+            hostId: undefined,
+            players: {},
+            hands: {},
+            slots: [null, null, null, null, null, null],
+            defenseSlots: [null, null, null, null, null, null],
+            playerCountAtStart: undefined,
+            winnerId: undefined,
+            startedAt: undefined,
+            deck: [],
+            discardPile: [],
+            maxHandSize: 6,
+            cardsDrawnThisTurn: {},
+            canDrawCards: true,
+            availableTargets: [],
+            factionBonuses: {},
+            targetSelectionMode: false,
+            selectedTarget: undefined,
+            factionEffects: {},
+            activeFactions: [],
+            factionCounter: {},
+            activeFirstAttackFactions: [],
+            usedDefenseCardFactions: {},
+            displayActiveFactions: [],
+            defenseFactionsBuffer: {},
+            minCardPower: 50,
+            maxCardPower: 100,
+            canDefendWithEqualPower: true,
+            turnActions: {
+                canEndTurn: false,
+                canPass: false,
+                canTakeCards: false,
+                canAttack: false,
+                canDefend: false,
+            },
+            turnHistory: [],
+            playerRoles: {},
+            attackPriority: 'attacker',
+            mainAttackerHasPlayed: false,
+            attackerPassed: false,
+            coAttackerPassed: false,
+            attackerBitoPressed: false,
+            coAttackerBitoPressed: false,
+            attackerPasPressed: false,
+            coAttackerPasPressed: false,
+            drawQueue: [],
+            gameInitialized: false,
+        });
     };
 
     // Обработчики drag & drop (базовая версия)
@@ -226,9 +323,8 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     };
 
     // Всегда используем gameState (даже если он undefined, используем fallback)
-    const safeGameState = gameState || INITIAL_GAME_STATE;
-    const myHand = safeGameState.hands[currentPlayerId] || [];
-    const playerIds = Object.keys(safeGameState.players || {});
+    const myHand = gameState.hands[currentPlayerId] || [];
+    const playerIds = Object.keys(gameState.players || {});
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -254,11 +350,11 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     <div>
                         <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Game Board V2</h2>
                         <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Игроков: {playerIds.length} | Карт в руке: {myHand.length} | Слотов на столе: {safeGameState.slots?.filter(s => s !== null).length || 0} | Колода: {safeGameState.deck.length}
+                            Игроков: {playerIds.length} | Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length}
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                        {safeGameState.phase === "lobby" || !safeGameState.gameInitialized ? (
+                        {gameState.phase === "lobby" || !gameState.gameInitialized ? (
                             <button
                                 onClick={createGame}
                                 style={{
@@ -315,7 +411,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         <h3 style={{ marginBottom: "10px" }}>Стол атаки</h3>
                         <DropZone
                             id="attack-table"
-                            cards={safeGameState.slots || []}
+                            cards={gameState.slots || []}
                             minVisibleCards={1}
                             onCardHover={setHoveredAttackCard}
                             highlightedCardIndex={hoveredAttackCard}
@@ -326,7 +422,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     <div style={{ marginBottom: "20px" }}>
                         <h3 style={{ marginBottom: "10px" }}>Защита</h3>
                         <DefenseZone
-                            attackCards={safeGameState.slots || []}
+                            attackCards={gameState.slots || []}
                             defenseCards={safeGameState.defenseSlots || []}
                             onCardHover={setHoveredDefenseCard}
                             highlightedCardIndex={hoveredDefenseCard}
