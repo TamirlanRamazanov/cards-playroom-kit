@@ -233,6 +233,7 @@ export default function App() {
     // Zustand store
     const { game: zustandGame, setGame: setZustandGame, updateGame: updateZustandGame } = useGameStore();
 
+
     // PlayroomKit multiplayer state для синхронизации между клиентами
     const [playroomGame, setPlayroomGame] = useMultiplayerState<GameState>("game", {
         phase: "lobby",
@@ -452,9 +453,7 @@ export default function App() {
     }, [currentPage, ready]);
 
     // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)
-    // ВСЕГДА рендерим компонент, чтобы хуки вызывались стабильно
     if (currentPage === "gameV2") {
-        // Передаем myId или пустую строку, компонент сам обработает loading
         return <GameBoardV2 myId={myId || ""} onBack={handleBackToMainMenu} />;
     }
 
