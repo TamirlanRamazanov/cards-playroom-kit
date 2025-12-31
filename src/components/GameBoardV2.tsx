@@ -87,11 +87,20 @@ interface GameBoardV2Props {
 }
 
 const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
-    // ВСЕГДА вызываем хуки на верхнем уровне - это критично для React
+    // ВСЕГДА вызываем ВСЕ хуки на верхнем уровне БЕЗ УСЛОВИЙ - это критично для React
     // PlayroomKit для синхронизации - используем константу вместо функции
     const [gameState, setGameState] = useMultiplayerState<GameState>("gameV2", INITIAL_GAME_STATE);
     
-    // Если myId пустой, показываем loading
+    // Локальные UI состояния (как в DebugGameBoardV2) - ВСЕГДА вызываем
+    const currentPlayerId = myId || ""; // Используем myId напрямую
+    const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
+    // TODO: gameMode будет использоваться позже
+    // const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
+    // Используем gameState.defenseSlots напрямую, без локального состояния
+    const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
+    const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
+    
+    // Если myId пустой, показываем loading ПОСЛЕ всех хуков
     if (!myId) {
         return (
             <div style={{
@@ -107,15 +116,6 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             </div>
         );
     }
-
-    // Локальные UI состояния (как в DebugGameBoardV2)
-    const currentPlayerId = myId; // Используем myId напрямую
-    const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
-    // TODO: gameMode будет использоваться позже
-    // const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
-    // Используем gameState.defenseSlots напрямую, без локального состояния
-    const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null);
-    const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null);
     // TODO: Будут использоваться позже при реализации полной логики
     // const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     // const [showSensorCircle, setShowSensorCircle] = useState<boolean>(false);
