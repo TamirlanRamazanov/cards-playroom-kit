@@ -282,14 +282,14 @@ export default function Lobby({ myId, game, updateGame }: Props) {
                         {playerIds.map((pid) => {
                             const playerRole = game.playerRoles?.[pid];
                             return (
-                                <li key={pid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+                            <li key={pid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
                                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: pid === myId ? "#4ade80" : "#6b7280" }} />
                                     <span style={{ opacity: pid === myId ? 1 : 0.7 }}>
                                         {game.players[pid]?.name || pid}
                                         {pid === game.hostId && <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.6 }}>(хост)</span>}
                                         {playerRole && <span style={{ marginLeft: 8, fontSize: 14 }}>{getRoleEmoji(playerRole)}</span>}
                                     </span>
-                                </li>
+                            </li>
                             );
                         })}
                     </ul>
@@ -360,7 +360,7 @@ export default function Lobby({ myId, game, updateGame }: Props) {
                             <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 16 }}>
                                 Роль: ⚔️ Главный атакующий
                             </div>
-                            <button
+                    <button
                                 onClick={() => setShowFirstPlayerModal(false)}
                                 style={{
                                     padding: "8px 16px",
@@ -372,10 +372,10 @@ export default function Lobby({ myId, game, updateGame }: Props) {
                                     fontSize: 14,
                                     fontWeight: 500
                                 }}
-                            >
+                    >
                                 Понятно
-                            </button>
-                        </div>
+                    </button>
+                </div>
                     </div>
                 )}
             </div>
