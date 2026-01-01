@@ -226,9 +226,7 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
 
 export default function App() {
     const [ready, setReady] = useState(false);
-    const [name, setName] = useState("");
-    const [currentPage, setCurrentPage] = useState<"mainMenu" | "login" | "game" | "gameV2" | "debug">("mainMenu");
-    const [targetPage, setTargetPage] = useState<"game" | "gameV2">("game");
+    const [currentPage, setCurrentPage] = useState<"mainMenu" | "game" | "gameV2" | "debug">("mainMenu");
 
     // Zustand store
     const { game: zustandGame, setGame: setZustandGame, updateGame: updateZustandGame } = useGameStore();
@@ -337,9 +335,11 @@ export default function App() {
 
     // startNewPlay удалена, используется прямой вызов insertCoin в кнопке Launch
 
-    const handleStartGame = () => {
-        setTargetPage("game");
-        setCurrentPage("login");
+    const handleStartGame = async () => {
+        // Для старой игры - используем лобби PlayroomKit
+        await insertCoin();
+        setReady(true);
+        setCurrentPage("game");
     };
 
     const handleDebugGame = () => {
@@ -355,17 +355,18 @@ export default function App() {
         if (!ready) return;
         const p = myPlayer?.();
         if (!p?.id) return;
-        if (!name) return;
 
         updateGame((prev) => {
             const players = { ...(prev.players || {}) };
-            players[p.id] = players[p.id] || { name };
+            // Генерируем имя по умолчанию на основе ID
+            const playerName = `Player ${p.id.slice(-4)}`;
+            players[p.id] = players[p.id] || { name: playerName };
             const next: GameState = { ...prev, players };
             if (!prev.hostId) next.hostId = p.id;
             return next;
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ready, name]);
+    }, [ready]);
 
     // Автоматическое подключение для gameV2 - ВСЕГДА вызываем ДО условных return'ов
     useEffect(() => {
@@ -383,68 +384,12 @@ export default function App() {
             onDebugGame={handleDebugGame} 
             onDebugGameV2={() => setCurrentPage("debug")}
             onGameV2={async () => {
-                // Устанавливаем целевую страницу и переходим на страницу входа
-                setTargetPage("gameV2");
-                setCurrentPage("login");
+                // Прямой переход к GameBoardV2 с автоматическим подключением
+                await insertCoin();
+                setReady(true);
+                setCurrentPage("gameV2");
             }}
         />;
-    }
-
-    // Отображаем страницу входа
-    if (currentPage === "login") {
-        return (
-            <div
-                style={{
-                    width: "100vw",
-                    height: "100vh",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#0b1020",
-                    color: "#fff",
-                }}
-            >
-                <div style={{ width: 360, padding: 20, background: "#101826", borderRadius: 12 }}>
-                    <h1 style={{ fontSize: 20, marginBottom: 8 }}>Playroom – вход</h1>
-                    <input
-                        placeholder="Ваше имя"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: 10,
-                            borderRadius: 10,
-                            border: "1px solid #374151",
-                            background: "#0b1020",
-                            color: "#fff",
-                            marginBottom: 12,
-                        }}
-                    />
-                    <button
-                        onClick={async () => {
-                            console.log('🎯 Launch нажата, targetPage:', targetPage);
-                            await insertCoin();
-                            setReady(true);
-                            // Переходим в целевую страницу после входа
-                            console.log('🎯 Переход на страницу:', targetPage);
-                            setCurrentPage(targetPage);
-                        }}
-                        disabled={!name}
-                        style={{
-                            width: "100%",
-                            padding: 10,
-                            borderRadius: 10,
-                            border: 0,
-                            background: name ? "#6366f1" : "#374151",
-                            color: "#fff",
-                            cursor: name ? "pointer" : "not-allowed",
-                        }}
-                    >
-                        Launch
-                    </button>
-                </div>
-            </div>
-        );
     }
 
     // Отображаем debug страницу
