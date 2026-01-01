@@ -368,14 +368,7 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ready]);
 
-    // Автоматическое подключение для gameV2 - ВСЕГДА вызываем ДО условных return'ов
-    useEffect(() => {
-        if (currentPage === "gameV2" && !ready) {
-            insertCoin().then(() => {
-                setReady(true);
-            });
-        }
-    }, [currentPage, ready]);
+    // Автоматическое подключение для gameV2 - убрано, так как подключение происходит в onGameV2
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
@@ -385,9 +378,17 @@ export default function App() {
             onDebugGameV2={() => setCurrentPage("debug")}
             onGameV2={async () => {
                 // Прямой переход к GameBoardV2 с автоматическим подключением
-                await insertCoin();
-                setReady(true);
-                setCurrentPage("gameV2");
+                console.log('🎯 Play V2 нажата, подключаемся...');
+                try {
+                    await insertCoin();
+                    console.log('✅ insertCoin завершен');
+                    setReady(true);
+                    // Переходим сразу, myId обновится через useMyId
+                    setCurrentPage("gameV2");
+                } catch (error) {
+                    console.error('❌ Ошибка при подключении:', error);
+                    alert('Ошибка при подключении к игре');
+                }
             }}
         />;
     }
@@ -399,7 +400,22 @@ export default function App() {
 
     // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)
     if (currentPage === "gameV2") {
-        return <GameBoardV2 myId={myId || ""} onBack={handleBackToMainMenu} />;
+        if (!ready || !myId) {
+            return (
+                <div style={{
+                    width: "100vw",
+                    height: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#0b1020",
+                    color: "#fff",
+                }}>
+                    <div>Подключение к комнате...</div>
+                </div>
+            );
+        }
+        return <GameBoardV2 myId={myId} onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем игру (лобби или игровую доску)
