@@ -383,11 +383,19 @@ export default function App() {
                     await insertCoin();
                     console.log('✅ insertCoin завершен');
                     setReady(true);
-                    // Небольшая задержка перед переходом, чтобы myId успел установиться
-                    setTimeout(() => {
-                        console.log('✅ Переходим на gameV2');
-                        setCurrentPage("gameV2");
-                    }, 100);
+                    
+                    // Ждем, пока myId будет готов (как в коммите 38efa1e)
+                    const checkMyId = () => {
+                        const p = myPlayer?.();
+                        if (p?.id) {
+                            console.log('✅ myId готов:', p.id);
+                            setCurrentPage("gameV2");
+                        } else {
+                            console.log('⏳ Ждем myId...');
+                            setTimeout(checkMyId, 50);
+                        }
+                    };
+                    checkMyId();
                 } catch (error) {
                     console.error('❌ Ошибка при подключении:', error);
                     alert('Ошибка при подключении к игре');
