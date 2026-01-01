@@ -368,7 +368,22 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ready]);
 
-    // Автоматическое подключение для gameV2 - убрано, так как подключение происходит в onGameV2
+    // Автоматическое подключение для gameV2 - происходит при переходе на страницу
+    useEffect(() => {
+        if (currentPage === "gameV2" && !ready) {
+            console.log('🎯 Инициируем подключение к PlayroomKit...');
+            insertCoin()
+                .then(() => {
+                    console.log('✅ insertCoin завершен');
+                    setReady(true);
+                })
+                .catch((error) => {
+                    console.error('❌ Ошибка при подключении:', error);
+                    alert('Ошибка при подключении к игре');
+                    setCurrentPage("mainMenu");
+                });
+        }
+    }, [currentPage, ready]);
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
@@ -376,38 +391,10 @@ export default function App() {
             onStartGame={handleStartGame} 
             onDebugGame={handleDebugGame} 
             onDebugGameV2={() => setCurrentPage("debug")}
-            onGameV2={async () => {
-                // Прямой переход к GameBoardV2 с автоматическим подключением
-                console.log('🎯 Play V2 нажата, подключаемся...');
-                try {
-                    await insertCoin();
-                    console.log('✅ insertCoin завершен');
-                    setReady(true);
-                    
-                    // Ждем, пока myId станет доступен
-                    const waitForMyId = () => {
-                        return new Promise<string>((resolve) => {
-                            const checkId = () => {
-                                const p = myPlayer?.();
-                                if (p?.id) {
-                                    console.log('✅ myId получен:', p.id);
-                                    resolve(p.id);
-                                } else {
-                                    console.log('⏳ Ждем myId...');
-                                    setTimeout(checkId, 100);
-                                }
-                            };
-                            checkId();
-                        });
-                    };
-                    
-                    await waitForMyId();
-                    console.log('🎯 Переход на gameV2');
-                    setCurrentPage("gameV2");
-                } catch (error) {
-                    console.error('❌ Ошибка при подключении:', error);
-                    alert('Ошибка при подключении к игре');
-                }
+            onGameV2={() => {
+                // Прямой переход к GameBoardV2, подключение произойдет в useEffect
+                console.log('🎯 Play V2 нажата, переходим...');
+                setCurrentPage("gameV2");
             }}
         />;
     }
