@@ -369,19 +369,31 @@ export default function App() {
     }, [ready]);
 
     // Автоматическое подключение для gameV2 - происходит при переходе на страницу
+    const hasInitiatedConnection = useRef(false);
     useEffect(() => {
-        if (currentPage === "gameV2" && !ready) {
+        if (currentPage === "gameV2" && !ready && !hasInitiatedConnection.current) {
+            hasInitiatedConnection.current = true;
             console.log('🎯 Инициируем подключение к PlayroomKit...');
-            insertCoin()
-                .then(() => {
-                    console.log('✅ insertCoin завершен');
-                    setReady(true);
-                })
-                .catch((error) => {
-                    console.error('❌ Ошибка при подключении:', error);
-                    alert('Ошибка при подключении к игре');
-                    setCurrentPage("mainMenu");
-                });
+            
+            // Небольшая задержка перед подключением, чтобы дать время для инициализации
+            setTimeout(() => {
+                insertCoin()
+                    .then(() => {
+                        console.log('✅ insertCoin завершен');
+                        setReady(true);
+                    })
+                    .catch((error) => {
+                        console.error('❌ Ошибка при подключении:', error);
+                        alert('Ошибка при подключении к игре');
+                        hasInitiatedConnection.current = false;
+                        setCurrentPage("mainMenu");
+                    });
+            }, 100);
+        }
+        
+        // Сбрасываем флаг при выходе со страницы
+        if (currentPage !== "gameV2") {
+            hasInitiatedConnection.current = false;
         }
     }, [currentPage, ready]);
 
