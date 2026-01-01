@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useMultiplayerState } from 'playroomkit';
@@ -152,10 +152,26 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setPlayroomGame(next);
     }, [myId, gameState, setPlayroomGame]);
 
+    // Ref для отслеживания того, что мы сами обновляем defenseCards
+    const isUpdatingDefenseCardsRef = useRef(false);
+    
     // Синхронизация defenseCards с gameState.defenseSlots
+    // Но только если мы не обновляем их сами (чтобы избежать race condition)
     useEffect(() => {
+        if (isUpdatingDefenseCardsRef.current) {
+            // Мы сами обновляем, пропускаем синхронизацию
+            isUpdatingDefenseCardsRef.current = false;
+            return;
+        }
+        
         const globalDefense = gameState.defenseSlots || [];
-        setDefenseCards(globalDefense);
+        // Синхронизируем только если есть реальные изменения
+        setDefenseCards(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(globalDefense)) {
+                return prev; // Нет изменений, не обновляем
+            }
+            return globalDefense;
+        });
     }, [gameState.defenseSlots]);
 
     // Глобальный сенсор для всех режимов
@@ -536,38 +552,31 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     };
 
     // Функция добавления карты защиты над конкретной картой атаки
-    const addDefenseCard = (attackCardIndex: number, defenseCard: Card): boolean => {
-        const attackCard = gameState.slots?.[attackCardIndex];
+    const addDefenseCard = (attackCardIndex: number, defenseCard: Card, currentGameState: GameState): { success: boolean; newDefenseSlots: (Card | null)[] } => {
+        const attackCard = currentGameState.slots?.[attackCardIndex];
         if (!attackCard) {
-            return false;
+            return { success: false, newDefenseSlots: currentGameState.defenseSlots || [] };
         }
         
         if (!validateDefenseCard(defenseCard, attackCard)) {
             alert(`❌ Недостаточная сила! Карта "${defenseCard.name}" (${defenseCard.power}) не может защитить от "${attackCard.name}" (${attackCard.power}). Требуется сила >= ${attackCard.power}`);
-            return false;
+            return { success: false, newDefenseSlots: currentGameState.defenseSlots || [] };
         }
         
-        const currentDefenseCards = [...defenseCards];
+        const currentDefenseCards = [...(currentGameState.defenseSlots || [])];
         while (currentDefenseCards.length <= attackCardIndex) {
             currentDefenseCards.push(null);
         }
         
         if (currentDefenseCards[attackCardIndex] !== null) {
-            return false;
+            return { success: false, newDefenseSlots: currentDefenseCards };
         }
         
         currentDefenseCards[attackCardIndex] = defenseCard;
-        setDefenseCards(currentDefenseCards);
-        
-        // Синхронизируем с глобальным состоянием
-        setPlayroomGame({
-            ...gameState,
-            defenseSlots: currentDefenseCards,
-        });
         
         updateActiveFactionsFromDefenseCard(defenseCard);
         
-        return true;
+        return { success: true, newDefenseSlots: currentDefenseCards };
     };
 
     // Функция синхронизации размера div защиты с div атаки
@@ -881,17 +890,26 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 
                 if (attackCards.length > 0) {
                     const targetIndex = hoveredAttackCard !== null ? hoveredAttackCard : attackCards[0].index;
-                    const defenseAdded = addDefenseCard(targetIndex, card);
+                    const result = addDefenseCard(targetIndex, card, gameState);
                     
-                    if (defenseAdded) {
+                    if (result.success) {
                         const myCards = [...(gameState.hands[currentPlayerId] || [])];
                         if (index >= 0 && index < myCards.length && myCards[index]?.id === card.id) {
                             myCards.splice(index, 1);
                         }
+                        
+                        // Помечаем, что мы сами обновляем defenseCards
+                        isUpdatingDefenseCardsRef.current = true;
+                        
+                        // Атомарно обновляем и defenseSlots, и hands
                         setPlayroomGame({
                             ...gameState,
                             hands: { ...gameState.hands, [currentPlayerId]: myCards },
+                            defenseSlots: result.newDefenseSlots,
                         });
+                        
+                        // Обновляем локальное состояние сразу
+                        setDefenseCards(result.newDefenseSlots);
                     }
                 } else {
                     alert('🛡️ Нет карт атаки для отбивания!');
@@ -1334,17 +1352,26 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                                     
                                     if (attackCards.length > 0) {
                                         const targetIndex = hoveredAttackCard !== null ? hoveredAttackCard : attackCards[0].index;
-                                        const defenseAdded = addDefenseCard(targetIndex, card);
+                                        const result = addDefenseCard(targetIndex, card, gameState);
                                         
-                                        if (defenseAdded) {
+                                        if (result.success) {
                                             const myCards = [...(gameState.hands[currentPlayerId] || [])];
                                             if (index >= 0 && index < myCards.length && myCards[index]?.id === card.id) {
                                                 myCards.splice(index, 1);
                                             }
+                                            
+                                            // Помечаем, что мы сами обновляем defenseCards
+                                            isUpdatingDefenseCardsRef.current = true;
+                                            
+                                            // Атомарно обновляем и defenseSlots, и hands
                                             setPlayroomGame({
                                                 ...gameState,
                                                 hands: { ...gameState.hands, [currentPlayerId]: myCards },
+                                                defenseSlots: result.newDefenseSlots,
                                             });
+                                            
+                                            // Обновляем локальное состояние сразу
+                                            setDefenseCards(result.newDefenseSlots);
                                         }
                                     } else {
                                         alert('🛡️ Нет карт атаки для отбивания!');
