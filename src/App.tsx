@@ -383,7 +383,26 @@ export default function App() {
                     await insertCoin();
                     console.log('✅ insertCoin завершен');
                     setReady(true);
-                    // Переходим сразу, myId обновится через useMyId
+                    
+                    // Ждем, пока myId станет доступен
+                    const waitForMyId = () => {
+                        return new Promise<string>((resolve) => {
+                            const checkId = () => {
+                                const p = myPlayer?.();
+                                if (p?.id) {
+                                    console.log('✅ myId получен:', p.id);
+                                    resolve(p.id);
+                                } else {
+                                    console.log('⏳ Ждем myId...');
+                                    setTimeout(checkId, 100);
+                                }
+                            };
+                            checkId();
+                        });
+                    };
+                    
+                    await waitForMyId();
+                    console.log('🎯 Переход на gameV2');
                     setCurrentPage("gameV2");
                 } catch (error) {
                     console.error('❌ Ошибка при подключении:', error);
