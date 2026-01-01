@@ -368,7 +368,7 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ready]);
 
-    // Автоматическое подключение для gameV2 - ВСЕГДА вызываем ДО условных return'ов
+    // Автоматическое подключение для gameV2 - резервный механизм (основной вызов в onGameV2)
     useEffect(() => {
         if (currentPage === "gameV2" && !ready) {
             insertCoin().then(() => {
@@ -383,10 +383,19 @@ export default function App() {
             onStartGame={handleStartGame} 
             onDebugGame={handleDebugGame} 
             onDebugGameV2={() => setCurrentPage("debug")}
-            onGameV2={() => {
-                // Прямой переход к GameBoardV2, подключение произойдет в useEffect
-                console.log('🎯 Play V2 нажата, переходим...');
-                setCurrentPage("gameV2");
+            onGameV2={async () => {
+                // Вызываем insertCoin() вручную, как в коммите 38efa1e (кнопка Launch)
+                console.log('🎯 Play V2 нажата, подключаемся...');
+                try {
+                    await insertCoin();
+                    setReady(true);
+                    // Переходим на страницу после успешного подключения
+                    console.log('✅ insertCoin завершен, переходим на gameV2');
+                    setCurrentPage("gameV2");
+                } catch (error) {
+                    console.error('❌ Ошибка при подключении:', error);
+                    alert('Ошибка при подключении к игре');
+                }
             }}
         />;
     }
