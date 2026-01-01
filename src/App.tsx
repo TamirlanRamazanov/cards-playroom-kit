@@ -368,14 +368,7 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ready]);
 
-    // Автоматическое подключение для gameV2 - резервный механизм (основной вызов в onGameV2)
-    useEffect(() => {
-        if (currentPage === "gameV2" && !ready) {
-            insertCoin().then(() => {
-                setReady(true);
-            });
-        }
-    }, [currentPage, ready]);
+    // Автоматическое подключение для gameV2 убрано - подключение происходит вручную в onGameV2
 
     // Отображаем главное меню
     if (currentPage === "mainMenu") {
@@ -388,10 +381,13 @@ export default function App() {
                 console.log('🎯 Play V2 нажата, подключаемся...');
                 try {
                     await insertCoin();
+                    console.log('✅ insertCoin завершен');
                     setReady(true);
-                    // Переходим на страницу после успешного подключения
-                    console.log('✅ insertCoin завершен, переходим на gameV2');
-                    setCurrentPage("gameV2");
+                    // Небольшая задержка перед переходом, чтобы myId успел установиться
+                    setTimeout(() => {
+                        console.log('✅ Переходим на gameV2');
+                        setCurrentPage("gameV2");
+                    }, 100);
                 } catch (error) {
                     console.error('❌ Ошибка при подключении:', error);
                     alert('Ошибка при подключении к игре');
