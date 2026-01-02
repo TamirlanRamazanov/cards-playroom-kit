@@ -827,25 +827,31 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         }
 
         // Определяем первого игрока (самая слабая карта)
-        let weakestPlayer = { playerId: playerIds[0], power: 999 };
+        let weakestPlayer = { playerId: playerIds[0], playerName: gameState.players[playerIds[0]]?.name || playerIds[0], cardName: "", power: 999 };
         playerIds.forEach(playerId => {
             const playerHand = hands[playerId] || [];
             if (playerHand.length > 0) {
                 const weakestCard = playerHand.reduce((weakest, card) => 
                     card.power < weakest.power ? card : weakest, playerHand[0]);
                 if (weakestCard.power < weakestPlayer.power) {
-                    weakestPlayer = { playerId, power: weakestCard.power };
+                    weakestPlayer = { 
+                        playerId, 
+                        playerName: gameState.players[playerId]?.name || playerId,
+                        cardName: weakestCard.name,
+                        power: weakestCard.power 
+                    };
                 }
             }
         });
 
-        // Назначаем роли игрокам
+        // Назначаем роли игрокам (используем ту же логику, что и в App.tsx)
         const roles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
-        const firstPlayerIndex = turnOrder.indexOf(weakestPlayer.playerId);
         const playerCount = playerIds.length;
+        const firstPlayerIndex = playerIds.indexOf(weakestPlayer.playerId);
         
-        turnOrder.forEach((playerId, index) => {
-            const relativeIndex = (index - firstPlayerIndex + turnOrder.length) % turnOrder.length;
+        // Назначаем роли по кругу от первого игрока
+        playerIds.forEach((playerId, index) => {
+            const relativeIndex = (index - firstPlayerIndex + playerIds.length) % playerIds.length;
             
             if (relativeIndex === 0) {
                 roles[playerId] = 'attacker'; // Главный атакующий
@@ -854,9 +860,13 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             } else if (relativeIndex === 2 && playerCount >= 3) {
                 roles[playerId] = 'co-attacker'; // Со-атакующий
             } else {
+                // Для 4-6 игроков: остальные становятся наблюдателями
                 roles[playerId] = 'observer'; // Наблюдающий
             }
         });
+        
+        console.log(`🎯 Распределение ролей для ${playerCount} игроков:`, roles);
+        console.log(`🎯 Первый игрок: ${weakestPlayer.playerName} (${weakestPlayer.cardName}, сила: ${weakestPlayer.power})`);
 
         const newGameState: GameState = {
             ...gameState,
@@ -1355,27 +1365,63 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 {/* Players Info */}
                 <div style={{ padding: 12, background: "#101826" }}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        {playerIds.map((pid) => (
-                            <div key={pid} style={{ 
-                                padding: "6px 10px", 
-                                borderRadius: "6px", 
-                                background: pid === currentPlayerId ? "#065f46" : "#1f2937",
-                                fontSize: "12px",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px"
-                            }}>
-                                <span>
-                                    {gameState.players[pid]?.name || pid}
-                                    {pid === currentPlayerId ? " • вы" : ""}
-                                    {pid === gameState.hostId ? " 👑" : ""}
-                                    {pid === gameState.currentTurn ? " ⏳" : ""}
-                                </span>
-                                <span style={{ opacity: 0.7 }}>
-                                    ({gameState.hands[pid]?.length || 0} карт)
-                                </span>
-                            </div>
-                        ))}
+                        {playerIds.map((pid) => {
+                            const role = gameState.playerRoles?.[pid];
+                            const getRoleEmoji = (role?: string): string => {
+                                switch (role) {
+                                    case 'attacker': return '⚔️';
+                                    case 'co-attacker': return '🗡️';
+                                    case 'defender': return '🛡️';
+                                    case 'observer': return '👁️';
+                                    default: return '❓';
+                                }
+                            };
+                            const getRoleName = (role?: string): string => {
+                                switch (role) {
+                                    case 'attacker': return 'Атакующий';
+                                    case 'co-attacker': return 'Со-атакующий';
+                                    case 'defender': return 'Защитник';
+                                    case 'observer': return 'Наблюдатель';
+                                    default: return 'Не назначена';
+                                }
+                            };
+                            
+                            return (
+                                <div key={pid} style={{ 
+                                    padding: "6px 10px", 
+                                    borderRadius: "6px", 
+                                    background: pid === currentPlayerId ? "#065f46" : "#1f2937",
+                                    fontSize: "12px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px"
+                                }}>
+                                    <span>
+                                        {gameState.players[pid]?.name || pid}
+                                        {pid === currentPlayerId ? " • вы" : ""}
+                                        {pid === gameState.hostId ? " 👑" : ""}
+                                        {pid === gameState.currentTurn ? " ⏳" : ""}
+                                    </span>
+                                    {role && (
+                                        <span style={{ 
+                                            opacity: 0.9,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "4px",
+                                            padding: "2px 6px",
+                                            background: "rgba(59, 130, 246, 0.2)",
+                                            borderRadius: "4px",
+                                            border: "1px solid rgba(59, 130, 246, 0.3)"
+                                        }}>
+                                            {getRoleEmoji(role)} {getRoleName(role)}
+                                        </span>
+                                    )}
+                                    <span style={{ opacity: 0.7 }}>
+                                        ({gameState.hands[pid]?.length || 0} карт)
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
