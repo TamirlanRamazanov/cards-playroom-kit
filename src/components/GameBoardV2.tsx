@@ -95,7 +95,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     
     // Локальные UI состояния (как в DebugGameBoardV2) - ВСЕГДА вызываем
     const [activeCard, setActiveCard] = useState<{ card: Card; index: number; source: string } | null>(null);
-    const [gameMode, setGameMode] = useState<'attack' | 'defense'>('attack');
+    const [gameMode] = useState<'attack' | 'defense'>('attack'); // Используется только до старта игры
     const [defenseCards, setDefenseCards] = useState<(Card | null)[]>([]); // Карты защиты, синхронизированные с картами атаки
     const [hoveredAttackCard, setHoveredAttackCard] = useState<number | null>(null); // Индекс наведенной карты атаки
     const [hoveredDefenseCard, setHoveredDefenseCard] = useState<number | null>(null); // Индекс наведенной карты защиты
@@ -168,6 +168,27 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         });
     }, [gameState.defenseSlots]);
 
+    // Функция для получения роли текущего игрока (определяем ДО использования)
+    const getCurrentPlayerRole = (): 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined => {
+        return gameState.playerRoles?.[currentPlayerId];
+    };
+
+    // Автоматически определяем режим на основе роли (определяем ДО использования)
+    const getGameModeFromRole = (): 'attack' | 'defense' => {
+        const role = getCurrentPlayerRole();
+        if (role === 'attacker' || role === 'co-attacker') {
+            return 'attack';
+        } else if (role === 'defender') {
+            return 'defense';
+        }
+        // Для наблюдателя возвращаем 'attack' по умолчанию (но он не сможет ничего делать)
+        return 'attack';
+    };
+
+    // Используем автоматически определенный режим вместо ручного переключения
+    // Определяем ДО использования в useEffect
+    const effectiveGameMode = gameState.gameInitialized ? getGameModeFromRole() : gameMode;
+
     // Глобальный сенсор для всех режимов
     useEffect(() => {
         if (activeCard && activeCard.source === 'hand') {
@@ -220,7 +241,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     const defenseIndex = parseInt((element as Element).getAttribute('data-defense-card-index') || '0');
                     
                     // В режиме атаки пропускаем пустые слоты
-                    if (gameMode === 'attack' && defenseCards[defenseIndex] === null) {
+                    if (effectiveGameMode === 'attack' && defenseCards[defenseIndex] === null) {
                         return;
                     }
 
@@ -231,7 +252,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 });
 
                 // Активируем ховер в зависимости от режима
-                if (gameMode === 'defense') {
+                if (effectiveGameMode === 'defense') {
                     // В режиме защиты: приоритет картам атаки
                     if (closestAttackCard && closestAttackDistance <= sensorRadius) {
                         const attackIndex = parseInt((closestAttackCard as Element).getAttribute('data-card-index') || '0');
@@ -255,7 +276,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         setActiveDropZone(null);
                         setInvalidDefenseCard(null);
                     }
-                } else if (gameMode === 'attack') {
+                } else if (effectiveGameMode === 'attack') {
                     if (activeDropZone) {
                         // Если активен drop zone через курсор, блокируем сенсор
                         setHoveredAttackCard(null);
@@ -279,7 +300,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                 document.removeEventListener('mousemove', handleGlobalMouseMove);
             };
         }
-    }, [gameMode, activeCard, defenseCards, gameState.slots]);
+    }, [effectiveGameMode, activeCard, defenseCards, gameState.slots]);
 
     // Очистка таймаута при размонтировании
     useEffect(() => {
@@ -304,7 +325,6 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
     // Функция проверки, можно ли взять карты
     const checkCanTakeCards = (): boolean => {
-        if (gameMode !== 'defense') return false;
         const role = getCurrentPlayerRole();
         if (role !== 'defender') return false;
         const attackCards = gameState.slots || [];
@@ -316,10 +336,31 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         return hasUnbeaten;
     };
 
-    // Функция для получения роли текущего игрока
-    const getCurrentPlayerRole = (): 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined => {
-        return gameState.playerRoles?.[currentPlayerId];
+    // Функция для проверки, может ли игрок атаковать
+    const canPlayerAttack = (): boolean => {
+        const role = getCurrentPlayerRole();
+        if (!role || (role !== 'attacker' && role !== 'co-attacker')) return false;
+        
+        // Проверяем приоритет атаки
+        if (role === 'attacker' && gameState.attackPriority === 'co-attacker') return false;
+        if (role === 'co-attacker' && gameState.attackPriority === 'attacker') return false;
+        
+        // Со-атакующий может играть только после того, как главный атакующий подкинул карту
+        if (role === 'co-attacker' && !gameState.mainAttackerHasPlayed) return false;
+        
+        // Проверяем, не нажал ли игрок уже "Пас"
+        if (role === 'attacker' && gameState.attackerPassed) return false;
+        if (role === 'co-attacker' && gameState.coAttackerPassed) return false;
+        
+        return true;
     };
+
+    // Функция для проверки, может ли игрок защищаться
+    const canPlayerDefend = (): boolean => {
+        const role = getCurrentPlayerRole();
+        return role === 'defender';
+    };
+
 
     // Функция для проверки наличия неотбитых карт
     const hasUnbeatenCards = (): boolean => {
@@ -558,7 +599,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     useEffect(() => {
         const canTake = checkCanTakeCards();
         setCanTakeCards(canTake);
-    }, [gameMode, gameState.slots, defenseCards]);
+    }, [effectiveGameMode, gameState.slots, defenseCards]);
 
     // Функции ховера (пустые - ховер обрабатывается глобальным сенсором)
     const handleAttackCardHover = (_index: number) => {};
@@ -988,7 +1029,14 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         const targetZoneString = String(targetZone);
         
         // Специальная обработка для карт защиты в режиме атаки
-        if (source === 'hand' && gameMode === 'attack' && (hoveredDefenseCard !== null || targetZoneString.startsWith('defense-card-'))) {
+        if (source === 'hand' && effectiveGameMode === 'attack' && (hoveredDefenseCard !== null || targetZoneString.startsWith('defense-card-'))) {
+            // Проверяем, что игрок может атаковать
+            if (!canPlayerAttack()) {
+                alert('❌ Вы не можете атаковать сейчас!');
+                setActiveCard(null);
+                setMousePosition(null);
+                return;
+            }
             let defenseCard: Card | null = null;
             if (hoveredDefenseCard !== null && defenseCards[hoveredDefenseCard]) {
                 defenseCard = defenseCards[hoveredDefenseCard];
@@ -1039,9 +1087,25 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             return;
         }
 
+        // Проверяем права на основе роли
+        const role = getCurrentPlayerRole();
+        if (role === 'observer') {
+            alert('👁️ Наблюдатели не могут играть карты!');
+            setActiveCard(null);
+            setMousePosition(null);
+            return;
+        }
+
         // Перемещение карты из руки на стол
         if (source === 'hand' && targetZone === 'table') {
-            if (gameMode === 'defense') {
+            if (effectiveGameMode === 'defense') {
+                // Проверяем, что игрок может защищаться
+                if (!canPlayerDefend()) {
+                    alert('❌ Только защитник может защищаться!');
+                    setActiveCard(null);
+                    setMousePosition(null);
+                    return;
+                }
                 const attackCards = gameState.slots?.map((slot, idx) => ({ slot, index: idx })).filter(({ slot }) => slot !== null) || [];
                 
                 if (attackCards.length > 0) {
@@ -1076,6 +1140,14 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             }
             
             // В режиме атаки добавляем карту на стол
+            // Проверяем, что игрок может атаковать
+            if (!canPlayerAttack()) {
+                alert('❌ Вы не можете атаковать сейчас!');
+                setActiveCard(null);
+                setMousePosition(null);
+                return;
+            }
+            
             const validation = validateAttackCard(card);
             if (!validation.isValid) {
                 alert(`❌ ${validation.reason}`);
@@ -1230,39 +1302,20 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        {/* Переключатель режимов атака/защита */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <button
-                                onClick={() => setGameMode('attack')}
-                                style={{
-                                    padding: "6px 12px",
-                                    background: gameMode === 'attack' ? "#dc2626" : "#374151",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "11px",
-                                    fontWeight: gameMode === 'attack' ? "bold" : "normal"
-                                }}
-                            >
-                                ⚔️ Атака
-                            </button>
-                            <button
-                                onClick={() => setGameMode('defense')}
-                                style={{
-                                    padding: "6px 12px",
-                                    background: gameMode === 'defense' ? "#1d4ed8" : "#374151",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "11px",
-                                    fontWeight: gameMode === 'defense' ? "bold" : "normal"
-                                }}
-                            >
-                                🛡️ Защита
-                            </button>
-                        </div>
+                        {/* Отображение текущей роли и режима (только после старта игры) */}
+                        {gameState.gameInitialized && (
+                            <div style={{ 
+                                padding: "6px 12px",
+                                background: effectiveGameMode === 'attack' ? "#dc2626" : "#1d4ed8",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                fontWeight: "bold",
+                                color: "#fff"
+                            }}>
+                                {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'}
+                                {getCurrentPlayerRole() === 'observer' && ' 👁️ Наблюдатель'}
+                            </div>
+                        )}
                         
                         {/* Кнопки действий */}
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1508,7 +1561,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                                 onCardHover={handleDefenseCardHover}
                                 onCardLeave={handleDefenseCardLeave}
                                 highlightedCardIndex={hoveredDefenseCard}
-                                gameMode={gameMode}
+                                gameMode={effectiveGameMode}
                                 invalidDefenseCard={invalidDefenseCard}
                             />
                         </div>
@@ -1531,7 +1584,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                                 id="table"
                                 cards={gameState.slots || []}
                                 minVisibleCards={1}
-                                gameMode={gameMode}
+                                gameMode={effectiveGameMode}
                                 onCardClick={(index) => {
                                     console.log('Clicked table card:', index);
                                 }}
@@ -1587,7 +1640,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                             onCardClick={(index) => {
                                 const card = myHand[index];
                                 
-                                if (gameMode === 'defense') {
+                                if (effectiveGameMode === 'defense') {
                                     const attackCards = gameState.slots?.map((slot, idx) => ({ slot, index: idx })).filter(({ slot }) => slot !== null) || [];
                                     
                                     if (attackCards.length > 0) {
@@ -1711,12 +1764,12 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
                     fontSize: "12px",
                     opacity: 0.8
                 }}>
-                    <div>🔄 Play V2 активен | {gameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'} | 🃏 {myHand.length}/6 карт | 📚 Колода: {gameState.deck.length} карт | 🖱️ Drag & Drop активен</div>
+                    <div>🔄 Play V2 активен | {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'} | 🃏 {myHand.length}/6 карт | 📚 Колода: {gameState.deck.length} карт | 🖱️ Drag & Drop активен</div>
                     <div style={{ marginTop: "4px", fontSize: "10px", opacity: 0.6 }}>
                         🎯 Отладка: activeCard={activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Наведение атаки={hoveredAttackCard !== null ? `карта ${hoveredAttackCard}` : 'нет'} | Наведение защиты={hoveredDefenseCard !== null ? `карта ${hoveredDefenseCard}` : 'нет'} | Мышь={mousePosition ? `${mousePosition.x},${mousePosition.y}` : 'нет'} | Защита={defenseCards.filter(card => card !== null).length} карт | Атака={gameState.slots?.filter(s => s !== null).length || 0} карт
                     </div>
                     <div style={{ marginTop: "2px", fontSize: "9px", opacity: 0.5, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        🖱️ Сенсор: {gameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
+                        🖱️ Сенсор: {effectiveGameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
                     </div>
                 </div>
 
