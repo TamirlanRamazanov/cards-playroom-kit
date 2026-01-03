@@ -109,6 +109,9 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // Используем PlayroomKit game как источник истины с fallback (используем константу)
     const gameState = playroomGame || INITIAL_GAME_STATE;
     
+    // Определяем currentPlayerId ДО использования в функциях
+    const currentPlayerId = myId || "";
+    
     // Используем фракции из глобального состояния для синхронизации между игроками
     const factionCounter = gameState.factionCounter || {};
     const activeFirstAttackFactions = gameState.activeFirstAttackFactions || [];
@@ -840,8 +843,6 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             </div>
         );
     }
-    
-    const currentPlayerId = myId;
 
     // Функция создания игры (как в DebugGameBoardV2)
     const createGame = () => {
