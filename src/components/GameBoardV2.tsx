@@ -630,81 +630,62 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setDefenseCards([]);
     };
 
-    // Функция для ротации ролей после взятия карт
+    // Функция для ротации ролей после взятия карт (как в GameBoard.tsx)
     const rotateRolesAfterTakeCards = () => {
-        const playerCount = gameState.playerCountAtStart || Object.keys(gameState.players || {}).length;
-        const newRoles = { ...gameState.playerRoles };
+        const playerIds = Object.keys(gameState.players || {});
+        const playerCount = playerIds.length;
+        const currentRoles = { ...gameState.playerRoles };
+        const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
         
         if (playerCount === 2) {
-            // Для 2 игроков роли не меняются
-            return newRoles;
+            // 2 игрока: роли не меняются
+            console.log('🎯 2 игрока - роли не меняются');
+            return currentRoles;
         } else if (playerCount === 3) {
-            // Для 3 игроков: со-атакующий → главный атакующий, главный → защитник, защитник → со-атакующий
-            const currentAttacker = Object.keys(newRoles).find(id => newRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(newRoles).find(id => newRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(newRoles).find(id => newRoles[id] === 'defender');
+            // 3 игрока: со-атакующий → главный атакующий, главный → защитник, защитник → со-атакующий
+            const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+            const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+            const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
             
             if (currentAttacker && currentCoAttacker && currentDefender) {
                 newRoles[currentCoAttacker] = 'attacker';
                 newRoles[currentAttacker] = 'defender';
                 newRoles[currentDefender] = 'co-attacker';
+                console.log('🎯 3 игрока - роли сдвинуты на 1 назад');
             }
-        } else {
-            // Для 4+ игроков: со-атакующий → главный атакующий, следующий → защитник, следующий → со-атакующий
-            const currentAttacker = Object.keys(newRoles).find(id => newRoles[id] === 'attacker');
-            const currentCoAttacker = Object.keys(newRoles).find(id => newRoles[id] === 'co-attacker');
-            const currentDefender = Object.keys(newRoles).find(id => newRoles[id] === 'defender');
+        } else if (playerCount >= 4) {
+            // 4+ игроков: со-атакующий → главный атакующий, следующий → защитник, следующий → со-атакующий
+            const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+            const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+            const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
             
             if (currentAttacker && currentCoAttacker && currentDefender) {
-                const allPlayerIds = Object.keys(newRoles);
-                const coAttackerIndex = allPlayerIds.indexOf(currentCoAttacker);
-                
-                const nextAfterCoAttacker = allPlayerIds[(coAttackerIndex + 1) % allPlayerIds.length];
-                const nextAfterNewDefender = allPlayerIds[(allPlayerIds.indexOf(nextAfterCoAttacker) + 1) % allPlayerIds.length];
+                const coAttackerIndex = playerIds.indexOf(currentCoAttacker);
+                const nextAfterCoAttacker = playerIds[(coAttackerIndex + 1) % playerIds.length];
+                const nextAfterNewDefender = playerIds[(playerIds.indexOf(nextAfterCoAttacker) + 1) % playerIds.length];
                 
                 newRoles[currentCoAttacker] = 'attacker';
                 newRoles[nextAfterCoAttacker] = 'defender';
                 newRoles[nextAfterNewDefender] = 'co-attacker';
                 
-                // Остальные становятся наблюдателями
-                allPlayerIds.forEach(id => {
+                playerIds.forEach(id => {
                     if (![currentCoAttacker, nextAfterCoAttacker, nextAfterNewDefender].includes(id)) {
                         newRoles[id] = 'observer';
                     }
                 });
+                
+                console.log('🎯 4+ игроков - роли сдвинуты');
             }
         }
         
-        return newRoles;
+        // Применяем новые роли, если они были изменены
+        if (Object.keys(newRoles).length > 0) {
+            return { ...currentRoles, ...newRoles };
+        }
+        
+        return currentRoles;
     };
 
-    // Функция для обработки очереди добора карт
-    const processDrawQueue = () => {
-        if (gameState.drawQueue.length === 0) {
-            return;
-        }
-        
-        const queueToProcess = [...gameState.drawQueue];
-        let updatedHands = { ...gameState.hands };
-        let remainingDeck = [...gameState.deck];
-        
-        queueToProcess.forEach(playerId => {
-            const playerHand = updatedHands[playerId] || [];
-            const cardsNeeded = Math.min(6 - playerHand.length, remainingDeck.length);
-            
-            if (cardsNeeded > 0 && remainingDeck.length > 0) {
-                const drawnCards = remainingDeck.splice(0, cardsNeeded);
-                updatedHands[playerId] = [...playerHand, ...drawnCards];
-            }
-        });
-        
-        setPlayroomGame({
-            ...gameState,
-            hands: updatedHands,
-            deck: remainingDeck,
-            drawQueue: [],
-        });
-    };
 
     // Функция для взятия карт
     const handleTakeCards = () => {
@@ -740,16 +721,30 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             return hand.length < 6;
         });
         
+        // Обрабатываем очередь добора карт сразу
+        let updatedHands = { ...gameState.hands, [currentPlayerId]: newHand };
+        let remainingDeck = [...gameState.deck];
+        
+        newDrawQueue.forEach(playerId => {
+            const playerHand = updatedHands[playerId] || [];
+            const cardsNeeded = Math.min(6 - playerHand.length, remainingDeck.length);
+            
+            if (cardsNeeded > 0 && remainingDeck.length > 0) {
+                const drawnCards = remainingDeck.splice(0, cardsNeeded);
+                updatedHands[playerId] = [...playerHand, ...drawnCards];
+                console.log(`🎯 Игрок ${playerId} получил ${drawnCards.length} карт`);
+            }
+        });
+        
+        // Обновляем состояние атомарно: карты, роли, очередь, сброс состояний
         setPlayroomGame({
             ...gameState,
-            hands: {
-                ...gameState.hands,
-                [currentPlayerId]: newHand
-            },
+            hands: updatedHands,
+            deck: remainingDeck,
+            drawQueue: [],
             slots: new Array(6).fill(null),
             defenseSlots: new Array(6).fill(null),
             playerRoles: newRoles,
-            drawQueue: newDrawQueue,
             // Сбрасываем состояния фракций
             factionCounter: {},
             defenseFactionsBuffer: {},
@@ -769,12 +764,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         setDefenseCards([]);
         resetTableStates();
         
-        // Обрабатываем очередь добора
-        setTimeout(() => {
-            processDrawQueue();
-        }, 0);
-        
-        alert(`✅ Взято ${allTableCards.length} карт со стола!`);
+        alert(`✅ Взято ${allTableCards.length} карт со стола! Роли обновлены.`);
     };
 
     // Функция для "Бито"
@@ -1838,4 +1828,5 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 };
 
 export default GameBoardV2;
+
 
