@@ -632,48 +632,65 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
 
 
-    // Функция для взятия карт (как в GameBoard.tsx)
+    // Функция для взятия карт (точно как в GameBoard.tsx)
     const handleTakeCards = () => {
         const role = getCurrentPlayerRole();
         if (role !== 'defender') {
-            alert('❌ Только защитник может взять карты');
+            console.log('❌ Только защитник может взять карты');
             return;
         }
-        
-        if (!canTakeCards) {
-            return;
-        }
-        
+
         console.log('🎯 Взятие карт: переносим все карты со стола в руку');
-        
-        // Используем актуальное состояние из playroomGame
-        const currentState = playroomGame || gameState;
-        
+
+        // Используем актуальное состояние из playroomGame (как prev в GameBoard.tsx)
+        const prev = playroomGame || gameState;
+
         // Собираем все карты со стола (атаки и защиты)
-        // Используем gameState.defenseSlots вместо локального defenseCards для синхронизации
-        const attackCards = currentState.slots?.filter(card => card !== null) || [];
-        const defenseCardsFromTable = (currentState.defenseSlots || []).filter(card => card !== null);
+        const attackCards = prev.slots?.filter(card => card !== null) || [];
+        const defenseCardsFromTable = (prev.defenseSlots || []).filter(card => card !== null);
         const allTableCards = [...attackCards, ...defenseCardsFromTable];
-        
+
         console.log(`📦 Карты для взятия: ${allTableCards.length} карт`);
         console.log('🃏 Карты атаки:', attackCards.map(card => card.name));
         console.log('🛡️ Карты защиты:', defenseCardsFromTable.map(card => card.name));
-        
+
         if (allTableCards.length === 0) {
+            console.log('⚠️ На столе нет карт для взятия');
             alert('⚠️ На столе нет карт для взятия');
             return;
         }
-        
-        // Получаем актуальные данные из текущего состояния
-        const myCards = [...(currentState.hands[currentPlayerId] || [])];
+
+        // Атомарно обновляем состояние игры: добавляем карты в руку, очищаем стол, сбрасываем состояния, меняем роли, обрабатываем очередь добора
+        const newState = { ...prev };
+        const myCards = [...(prev.hands[currentPlayerId] || [])];
         const newHand = [...myCards, ...allTableCards];
-        
+
         console.log(`✅ Карты добавлены в руку. Было: ${myCards.length}, стало: ${newHand.length}`);
-        
-        // Ротируем роли (используем актуальное состояние)
-        const playerIds = Object.keys(currentState.players || {});
+
+        // Обновляем руку защитника
+        newState.hands = {
+            ...prev.hands,
+            [currentPlayerId]: newHand
+        };
+
+        // Очищаем стол
+        newState.slots = new Array(6).fill(null);
+        newState.defenseSlots = new Array(6).fill(null);
+
+        // Сбрасываем состояния кнопок и приоритетов
+        newState.attackPriority = 'attacker';
+        newState.mainAttackerHasPlayed = false;
+        newState.attackerPassed = false;
+        newState.coAttackerPassed = false;
+        newState.attackerBitoPressed = false;
+        newState.coAttackerBitoPressed = false;
+        newState.attackerPasPressed = false;
+        newState.coAttackerPasPressed = false;
+
+        // Меняем роли после взятия карт (встроенная логика)
+        const playerIds = Object.keys(prev.players || {});
         const playerCount = playerIds.length;
-        const currentRoles = { ...currentState.playerRoles };
+        const currentRoles = { ...prev.playerRoles };
         const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
         
         if (playerCount === 2) {
@@ -717,22 +734,28 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         }
         
         // Применяем новые роли, если они были изменены
-        const finalRoles = Object.keys(newRoles).length > 0 
-            ? { ...currentRoles, ...newRoles }
-            : currentRoles;
-        
-        // Обрабатываем очередь добора карт
-        const deck = [...(currentState.deck || [])];
-        const hands = { ...currentState.hands, [currentPlayerId]: newHand };
-        
-        // Добавляем всех игроков в очередь добора
-        const drawQueue = playerIds.filter(id => {
-            const hand = hands[id] || [];
-            return hand.length < 6;
+        if (Object.keys(newRoles).length > 0) {
+            newState.playerRoles = { ...currentRoles, ...newRoles };
+        }
+
+        // Добавляем всех игроков в очередь добора карт и обрабатываем её
+        // В GameBoard.tsx очередь формируется так: currentQueue.push(myId), но мы добавляем всех игроков с менее чем 6 картами
+        const currentQueue = [...(prev.drawQueue || [])];
+        // Добавляем всех игроков, у которых меньше 6 карт
+        const allPlayerIds = Object.keys(prev.players || {});
+        allPlayerIds.forEach(playerId => {
+            const hand = playerId === currentPlayerId ? newHand : (prev.hands[playerId] || []);
+            if (hand.length < 6 && !currentQueue.includes(playerId)) {
+                currentQueue.push(playerId);
+            }
         });
+        newState.drawQueue = currentQueue;
         
         // Обрабатываем очередь добора карт
-        for (const playerId of drawQueue) {
+        const deck = [...(prev.deck || [])];
+        const hands = { ...newState.hands };
+        
+        for (const playerId of currentQueue) {
             const playerHand = hands[playerId] || [];
             
             // Добираем карты до 6, если в колоде есть карты
@@ -747,31 +770,20 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             hands[playerId] = playerHand;
         }
         
-        // Обновляем состояние атомарно: карты, роли, очередь, сброс состояний
-        setPlayroomGame({
-            ...currentState,
-            hands: hands,
-            deck: deck,
-            drawQueue: [],
-            slots: new Array(6).fill(null),
-            defenseSlots: new Array(6).fill(null),
-            playerRoles: finalRoles,
-            // Сбрасываем состояния фракций
-            factionCounter: {},
-            defenseFactionsBuffer: {},
-            activeFirstAttackFactions: [],
-            usedDefenseCardFactions: {},
-            // Сбрасываем состояния кнопок
-            mainAttackerHasPlayed: false,
-            attackerPassed: false,
-            coAttackerPassed: false,
-            attackerBitoPressed: false,
-            coAttackerBitoPressed: false,
-            attackerPasPressed: false,
-            coAttackerPasPressed: false,
-            attackPriority: 'attacker',
-        });
-        
+        newState.deck = deck;
+        newState.hands = hands;
+        newState.drawQueue = []; // Очищаем очередь после обработки
+
+        // Сбрасываем состояния фракций
+        newState.factionCounter = {};
+        newState.defenseFactionsBuffer = {};
+        newState.activeFirstAttackFactions = [];
+        newState.usedDefenseCardFactions = {};
+
+        // Обновляем состояние атомарно
+        setPlayroomGame(newState);
+
+        // Сбрасываем локальные состояния
         setDefenseCards([]);
         resetTableStates();
         
