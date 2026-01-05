@@ -738,17 +738,9 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             newState.playerRoles = { ...currentRoles, ...newRoles };
         }
 
-        // Добавляем всех игроков в очередь добора карт и обрабатываем её
-        // В GameBoard.tsx очередь формируется так: currentQueue.push(myId), но мы добавляем всех игроков с менее чем 6 картами
+        // Добавляем защитника в очередь добора карт и обрабатываем её (точно как в GameBoard.tsx)
         const currentQueue = [...(prev.drawQueue || [])];
-        // Добавляем всех игроков, у которых меньше 6 карт
-        const allPlayerIds = Object.keys(prev.players || {});
-        allPlayerIds.forEach(playerId => {
-            const hand = playerId === currentPlayerId ? newHand : (prev.hands[playerId] || []);
-            if (hand.length < 6 && !currentQueue.includes(playerId)) {
-                currentQueue.push(playerId);
-            }
-        });
+        currentQueue.push(currentPlayerId); // Защитник добавляется в конец очереди
         newState.drawQueue = currentQueue;
         
         // Обрабатываем очередь добора карт
