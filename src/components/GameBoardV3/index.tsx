@@ -10,9 +10,12 @@ import { checkCanTakeCards, handleTakeCards } from './modules/cardManagement';
 import { handleBito, hasUnbeatenCards } from './modules/turnSystem';
 import { rotateRolesAfterTakeCards } from './modules/roleSystem';
 import { processDrawQueue } from './modules/drawQueue';
-import { getFactionNames } from './modules/factionSystem';
-import { FACTIONS } from '../../engine/cards';
-import DropZone from '../DropZone';
+import { GameControls } from './components/GameControls';
+import { PlayersInfo } from './components/PlayersInfo';
+import { GameTable } from './components/GameTable';
+import { PlayerHand } from './components/PlayerHand';
+import { ActiveFactions } from './components/ActiveFactions';
+import { DebugInfo } from './components/DebugInfo';
 import DefenseZone from '../DefenseZone';
 import type { Card } from '../../types';
 
@@ -271,63 +274,7 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
     }
     
     const myHand = gameState.hands[myId] || [];
-    const playerIds = Object.keys(gameState.players || {});
     const role = getCurrentPlayerRole(gameState, myId);
-    
-    // Собираем активные фракции для отображения
-    const activeFirstAttackFactions = gameState.activeFirstAttackFactions || [];
-    const factionCounter = gameState.factionCounter || {};
-    const usedDefenseCardFactions = gameState.usedDefenseCardFactions || {};
-    
-    const allAvailableDefenseFactions: number[] = [];
-    defenseCards.forEach(defenseCard => {
-        if (defenseCard) {
-            const availableDefenseFactions = defenseCard.factions.filter(factionId => {
-                const usedFactions = usedDefenseCardFactions[defenseCard.id] || [];
-                return !usedFactions.includes(factionId);
-            });
-            allAvailableDefenseFactions.push(...availableDefenseFactions);
-        }
-    });
-    
-    const allActiveFactionIds = [...new Set([
-        ...activeFirstAttackFactions,
-        ...allAvailableDefenseFactions
-    ])];
-    
-    const displayCounter: Record<number, number> = {};
-    activeFirstAttackFactions.forEach(factionId => {
-        displayCounter[factionId] = (displayCounter[factionId] || 0) + (factionCounter[factionId] || 0);
-    });
-    allAvailableDefenseFactions.forEach(factionId => {
-        displayCounter[factionId] = (displayCounter[factionId] || 0) + 1;
-    });
-    
-    const activeFactionIdsWithCount = allActiveFactionIds.filter(factionId => 
-        displayCounter[factionId] > 0
-    );
-    
-    const allActiveFactionNames = getFactionNames(activeFactionIdsWithCount);
-    
-    const getRoleEmoji = (role?: string): string => {
-        switch (role) {
-            case 'attacker': return '⚔️';
-            case 'co-attacker': return '🗡️';
-            case 'defender': return '🛡️';
-            case 'observer': return '👁️';
-            default: return '❓';
-        }
-    };
-    
-    const getRoleName = (role?: string): string => {
-        switch (role) {
-            case 'attacker': return 'Атакующий';
-            case 'co-attacker': return 'Со-атакующий';
-            case 'defender': return 'Защитник';
-            case 'observer': return 'Наблюдатель';
-            default: return 'Не назначена';
-        }
-    };
     
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -348,176 +295,29 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                 overflow: "hidden"
             }}>
                 {/* Header */}
-                <div style={{ 
-                    padding: "12px 20px", 
-                    background: "#1a1a2e", 
-                    borderBottom: "2px solid #8B0000",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}>
-                    <div>
-                        <h2 style={{ margin: 0, color: "#FFD700" }}>🎮 Game Board V3 (Модульная версия)</h2>
-                        <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                            Карт в руке: {myHand.length} | Слотов на столе: {gameState.slots?.filter(s => s !== null).length || 0} | Колода: {gameState.deck.length}
-                        </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        {gameState.gameInitialized && (
-                            <div style={{ 
-                                padding: "6px 12px",
-                                background: effectiveGameMode === 'attack' ? "#dc2626" : "#1d4ed8",
-                                borderRadius: "4px",
-                                fontSize: "11px",
-                                fontWeight: "bold",
-                                color: "#fff"
-                            }}>
-                                {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'}
-                                {role === 'observer' && ' 👁️ Наблюдатель'}
-                            </div>
-                        )}
-                        
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <button 
-                                onClick={handleTakeCardsClick}
-                                disabled={!canTakeCards}
-                                style={{
-                                    padding: "8px 12px",
-                                    background: canTakeCards ? "#f59e0b" : "#6b7280",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    color: "#fff",
-                                    cursor: canTakeCards ? "pointer" : "not-allowed",
-                                    fontSize: "12px",
-                                    opacity: canTakeCards ? 1 : 0.5
-                                }}
-                            >
-                                🃏 Взять карты
-                            </button>
-                            
-                            <button 
-                                onClick={handleBitoClick}
-                                style={{
-                                    padding: "8px 12px",
-                                    background: "#8b5cf6",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontSize: "12px"
-                                }}
-                            >
-                                🚫 Бито
-                            </button>
-                        </div>
-                        
-                        {gameState.phase === "lobby" || !gameState.gameInitialized ? (
-                            <button
-                                onClick={handleCreateGame}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#10b981",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                🚀 Старт
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleRestartGame}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#ef4444",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                🔄 Рестарт
-                            </button>
-                        )}
-                        <button 
-                            onClick={() => setShowSensorCircle(!showSensorCircle)}
-                            style={{
-                                padding: "8px 12px",
-                                background: showSensorCircle ? "#059669" : "#6b7280",
-                                border: "none",
-                                borderRadius: "6px",
-                                color: "#fff",
-                                cursor: "pointer"
-                            }}
-                        >
-                            {showSensorCircle ? "Скрыть сенсор" : "Показать сенсор"}
-                        </button>
-                        {onBack && (
-                            <button
-                                onClick={onBack}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: "#6b7280",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                ← Назад
-                            </button>
-                        )}
-                    </div>
-                </div>
+                <GameControls
+                    gameInitialized={gameState.gameInitialized || false}
+                    phase={gameState.phase}
+                    effectiveGameMode={effectiveGameMode}
+                    playerRole={role}
+                    canTakeCards={canTakeCards}
+                    onStartGame={handleCreateGame}
+                    onRestartGame={handleRestartGame}
+                    onTakeCards={handleTakeCardsClick}
+                    onBito={handleBitoClick}
+                    showSensorCircle={showSensorCircle}
+                    onToggleSensor={() => setShowSensorCircle(!showSensorCircle)}
+                    onBack={onBack}
+                    myHandLength={myHand.length}
+                    slotsCount={gameState.slots?.filter(s => s !== null).length || 0}
+                    deckLength={gameState.deck.length}
+                />
                 
                 {/* Players Info */}
-                <div style={{ padding: 12, background: "#101826" }}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        {playerIds.map((pid) => {
-                            const playerRole = gameState.playerRoles?.[pid];
-                            
-                            return (
-                                <div key={pid} style={{ 
-                                    padding: "6px 10px", 
-                                    borderRadius: "6px", 
-                                    background: pid === myId ? "#065f46" : "#1f2937",
-                                    fontSize: "12px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px"
-                                }}>
-                                    <span>
-                                        {gameState.players[pid]?.name || pid}
-                                        {pid === myId ? " • вы" : ""}
-                                        {pid === gameState.hostId ? " 👑" : ""}
-                                        {pid === gameState.currentTurn ? " ⏳" : ""}
-                                    </span>
-                                    {playerRole && (
-                                        <span style={{ 
-                                            opacity: 0.9,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "4px",
-                                            padding: "2px 6px",
-                                            background: "rgba(59, 130, 246, 0.2)",
-                                            borderRadius: "4px",
-                                            border: "1px solid rgba(59, 130, 246, 0.3)"
-                                        }}>
-                                            {getRoleEmoji(playerRole)} {getRoleName(playerRole)}
-                                        </span>
-                                    )}
-                                    <span style={{ opacity: 0.7 }}>
-                                        ({gameState.hands[pid]?.length || 0} карт)
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                <PlayersInfo
+                    gameState={gameState}
+                    currentPlayerId={myId}
+                />
                 
                 {/* Game Board */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", overflow: "auto" }}>
@@ -529,68 +329,10 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                         {/* Контейнер для дива защиты с абсолютно позиционированными фракциями */}
                         <div style={{ position: "relative", marginBottom: "20px", width: "100%", display: "flex", justifyContent: "center" }}>
                             {/* Активные фракции - абсолютно позиционированы слева */}
-                            {allActiveFactionNames.length > 0 && (
-                                <div style={{ 
-                                    position: "absolute",
-                                    left: "0",
-                                    top: "0",
-                                    width: "200px", 
-                                    minHeight: "160px",
-                                    background: "#1f2937", 
-                                    borderRadius: "8px",
-                                    border: "2px solid #4B5563",
-                                    padding: "8px",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    zIndex: 10
-                                }}>
-                                    <h4 style={{ color: "#F59E0B", marginBottom: "8px", fontSize: "12px" }}>
-                                        🎯 Активные фракции
-                                    </h4>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
-                                        {allActiveFactionNames.map((faction, index) => {
-                                            const factionEntry = Object.entries(FACTIONS).find(([_, name]) => name === faction);
-                                            const factionId = factionEntry ? parseInt(factionEntry[0]) : -1;
-                                            const count = displayCounter[factionId] || 0;
-                                            
-                                            return (
-                                                <div 
-                                                    key={index}
-                                                    style={{ 
-                                                        color: "#E5E7EB", 
-                                                        fontSize: "10px",
-                                                        padding: "4px 8px",
-                                                        background: "rgba(245, 158, 11, 0.1)",
-                                                        borderRadius: "4px",
-                                                        border: "1px solid rgba(245, 158, 11, 0.3)",
-                                                        whiteSpace: "nowrap",
-                                                        textAlign: "center",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "4px"
-                                                    }}
-                                                >
-                                                    <span>{faction}</span>
-                                                    <span style={{ 
-                                                        background: "rgba(245, 158, 11, 0.3)", 
-                                                        borderRadius: "50%", 
-                                                        width: "16px", 
-                                                        height: "16px", 
-                                                        display: "flex", 
-                                                        alignItems: "center", 
-                                                        justifyContent: "center",
-                                                        fontSize: "8px",
-                                                        fontWeight: "bold"
-                                                    }}>
-                                                        {count}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
+                            <ActiveFactions
+                                gameState={gameState}
+                                defenseCards={defenseCards}
+                            />
                             
                             {/* Див защиты - по центру */}
                             <DefenseZone
@@ -608,96 +350,60 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                         </div>
                         
                         {/* Игровой стол */}
-                        <div style={{ 
-                            padding: "20px", 
-                            background: "#1f2937", 
-                            borderRadius: "12px",
-                            border: "2px solid #4B5563",
-                            marginBottom: "12px",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center"
-                        }}>
-                            <div style={{ fontSize: "16px", marginBottom: "16px", color: "#FFD700" }}>
-                                🎮 Слоты на столе:
-                            </div>
-                            <DropZone
-                                id="table"
-                                cards={gameState.slots || []}
-                                minVisibleCards={1}
-                                gameMode={effectiveGameMode}
-                                onCardClick={(index) => {
-                                    console.log('Clicked table card:', index);
-                                }}
-                                onCardHover={handleAttackCardHover}
-                                onCardLeave={handleAttackCardLeave}
-                                highlightedCardIndex={hoveredAttackCard}
-                                onMousePositionUpdate={setMousePosition}
-                                activeCard={activeCard}
-                                onDropZoneActivate={(zoneId) => {
-                                    if (dropZoneTimeout) {
-                                        clearTimeout(dropZoneTimeout);
-                                        setDropZoneTimeout(null);
-                                    }
-                                    setActiveDropZone(zoneId);
-                                }}
-                                onDropZoneDeactivate={() => {
-                                    const timeout = setTimeout(() => {
-                                        setActiveDropZone(null);
-                                        setDropZoneTimeout(null);
-                                    }, 100);
-                                    setDropZoneTimeout(timeout);
-                                }}
-                                activeDropZone={activeDropZone}
-                            />
-                            
-                            {defenseCards.filter(card => card !== null).length > 0 && (
-                                <div style={{ 
-                                    fontSize: "12px", 
-                                    color: "#93c5fd", 
-                                    marginTop: "8px",
-                                    textAlign: "center"
-                                }}>
-                                    🎯 Карты защиты: {defenseCards.filter(card => card !== null).length} из {defenseCards.length} слотов
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                
-                {/* My hand - внизу экрана */}
-                <div style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
-                    <div style={{
-                        maxWidth: "100%",
-                        overflow: "hidden"
-                    }}>
-                        <DropZone
-                            id="my-hand"
-                            cards={myHand}
-                            maxVisibleCards={10}
-                            defenseCards={defenseCards}
-                            onMousePositionUpdate={setMousePosition}
+                        <GameTable
+                            slots={gameState.slots || []}
+                            gameMode={effectiveGameMode}
+                            hoveredAttackCard={hoveredAttackCard}
                             activeCard={activeCard}
+                            mousePosition={mousePosition}
+                            activeDropZone={activeDropZone}
+                            onCardClick={(index) => {
+                                console.log('Clicked table card:', index);
+                            }}
+                            onCardHover={handleAttackCardHover}
+                            onCardLeave={handleAttackCardLeave}
+                            onMousePositionUpdate={setMousePosition}
+                            onDropZoneActivate={(zoneId) => {
+                                if (dropZoneTimeout) {
+                                    clearTimeout(dropZoneTimeout);
+                                    setDropZoneTimeout(null);
+                                }
+                                setActiveDropZone(zoneId);
+                            }}
+                            onDropZoneDeactivate={() => {
+                                const timeout = setTimeout(() => {
+                                    setActiveDropZone(null);
+                                    setDropZoneTimeout(null);
+                                }, 100);
+                                setDropZoneTimeout(timeout);
+                            }}
+                            dropZoneTimeout={dropZoneTimeout}
+                            defenseCardsCount={defenseCards.filter(card => card !== null).length}
                         />
                     </div>
                 </div>
                 
+                {/* My hand - внизу экрана */}
+                <PlayerHand
+                    cards={myHand}
+                    defenseCards={defenseCards}
+                    activeCard={activeCard}
+                    onMousePositionUpdate={setMousePosition}
+                />
+                
                 {/* Debug Info */}
-                <div style={{ 
-                    padding: "12px 20px", 
-                    background: "#1a1a2e", 
-                    borderTop: "2px solid #8B0000",
-                    fontSize: "12px",
-                    opacity: 0.8
-                }}>
-                    <div>🔄 Play V3 активен | {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'} | 🃏 {myHand.length}/6 карт | 📚 Колода: {gameState.deck.length} карт | 🖱️ Drag & Drop активен</div>
-                    <div style={{ marginTop: "4px", fontSize: "10px", opacity: 0.6 }}>
-                        🎯 Отладка: activeCard={activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Наведение атаки={hoveredAttackCard !== null ? `карта ${hoveredAttackCard}` : 'нет'} | Наведение защиты={hoveredDefenseCard !== null ? `карта ${hoveredDefenseCard}` : 'нет'} | Мышь={mousePosition ? `${mousePosition.x},${mousePosition.y}` : 'нет'} | Защита={defenseCards.filter(card => card !== null).length} карт | Атака={gameState.slots?.filter(s => s !== null).length || 0} карт
-                    </div>
-                    <div style={{ marginTop: "2px", fontSize: "9px", opacity: 0.5, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        🖱️ Сенсор: {effectiveGameMode === 'attack' ? 'ищет карты (защита > атака)' : 'ищет карты атаки'} | Радиус: 80px | Курсор: {mousePosition ? `${mousePosition.x}, ${mousePosition.y}` : 'нет'} | Активная карта: {activeCard ? `${activeCard.card.name} (${activeCard.source})` : 'нет'} | Отладка: {showSensorCircle ? 'включена' : 'выключена'}
-                    </div>
-                </div>
+                <DebugInfo
+                    effectiveGameMode={effectiveGameMode}
+                    myHandLength={myHand.length}
+                    deckLength={gameState.deck.length}
+                    activeCard={activeCard}
+                    hoveredAttackCard={hoveredAttackCard}
+                    hoveredDefenseCard={hoveredDefenseCard}
+                    mousePosition={mousePosition}
+                    defenseCardsCount={defenseCards.filter(card => card !== null).length}
+                    slotsCount={gameState.slots?.filter(s => s !== null).length || 0}
+                    showSensorCircle={showSensorCircle}
+                />
                 
                 {/* Визуальный индикатор сенсора */}
                 {(activeCard || showSensorCircle) && mousePosition && (
