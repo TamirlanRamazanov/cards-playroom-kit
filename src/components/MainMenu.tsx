@@ -214,34 +214,6 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onPlay3, onDebugGameV2
                     onClick={onDebugGameV2}
                     style={{
                         position: "absolute",
-                        top: "75.25%", // Настройте позицию между Debug и Rules
-                        left: "50%", // Настройте позицию
-                        transform: "translate(-50%, -50%) rotate(4deg)",
-                        width: "75%", // 20% от ширины изображения
-                        height: "8%", // 8% от высоты изображения
-                        border: "none", //"2px solid purple", // Временно видимая граница
-                        background: "transparent", //"rgba(128, 0, 128, 0.3)", // Временно видимый фон
-                        cursor: "pointer",
-                        fontSize: "clamp(8px, 3vw, 64px)",
-                        fontWeight: "bold",
-                        color: "#8B0000",
-                        fontFamily: "Pirata One, cursive",
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-                        zIndex: 4,
-
-                        display: "flex",
-                        alignItems: "flex-end",      /* Позиционируем от низа */
-                        justifyContent: "center",    /* Горизонтальное центрирование */
-                        paddingBottom: "3%",  
-                    }}
-                >
-                    Debug V2
-                </button>
-
-                <button
-                    onClick={onDebugGameV2}
-                    style={{
-                        position: "absolute",
                         top: "82%", // Настройте позицию
                         left: "50%", // Настройте позицию
                         transform: "translate(-50%, -50%) rotate(4deg)",
