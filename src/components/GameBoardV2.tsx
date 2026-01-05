@@ -805,9 +805,50 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             slotsAfter: newState.slots?.filter(c => c !== null).length || 0,
             defenseSlotsAfter: newState.defenseSlots?.filter(c => c !== null).length || 0,
             deckRemaining: newState.deck?.length || 0,
+            newStateKeys: Object.keys(newState),
+            handsKeys: Object.keys(newState.hands),
         });
         
-        setPlayroomGame(newState);
+        // ВАЖНО: setPlayroomGame должен обновить состояние синхронно
+        // Проверяем, что newState содержит все необходимые поля
+        console.log('🔍 Проверка newState перед setPlayroomGame:', {
+            hasHands: !!newState.hands,
+            hasSlots: !!newState.slots,
+            hasDefenseSlots: !!newState.defenseSlots,
+            handsType: typeof newState.hands,
+            defenderHandLength: newState.hands[currentPlayerId]?.length,
+            defenderHandCards: newState.hands[currentPlayerId]?.map(c => c.name) || [],
+        });
+        
+        // ВАЖНО: Убеждаемся, что мы передаем полный объект GameState
+        // Проверяем, что все обязательные поля присутствуют
+        const finalState: GameState = {
+            ...newState,
+            // Убеждаемся, что все поля присутствуют
+            hands: newState.hands,
+            slots: newState.slots,
+            defenseSlots: newState.defenseSlots,
+            deck: newState.deck,
+            playerRoles: newState.playerRoles,
+        };
+        
+        console.log('🔍 Финальное состояние перед setPlayroomGame:', {
+            finalHandsLength: finalState.hands[currentPlayerId]?.length || 0,
+            finalHandsCards: finalState.hands[currentPlayerId]?.map(c => c.name) || [],
+        });
+        
+        setPlayroomGame(finalState);
+        
+        // Проверяем состояние сразу после обновления
+        setTimeout(() => {
+            const updatedState = playroomGame || INITIAL_GAME_STATE;
+            console.log('🔍 Состояние после setPlayroomGame (через 100ms):', {
+                handsAfter: updatedState.hands[currentPlayerId]?.length || 0,
+                slotsAfter: updatedState.slots?.filter(c => c !== null).length || 0,
+                defenseSlotsAfter: updatedState.defenseSlots?.filter(c => c !== null).length || 0,
+                handsCards: updatedState.hands[currentPlayerId]?.map(c => c.name) || [],
+            });
+        }, 100);
 
         // Сбрасываем локальные состояния
         setDefenseCards([]);
