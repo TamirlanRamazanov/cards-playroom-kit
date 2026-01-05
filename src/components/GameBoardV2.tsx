@@ -158,7 +158,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             
             return next;
         });
-    }, [myId]); // Убрали playroomGame из зависимостей, используем только myId
+    }, [myId, playroomGame]); // Добавили playroomGame обратно, чтобы регистрация срабатывала после рестарта
 
     // Ref для отслеживания того, что мы сами обновляем defenseCards
     const isUpdatingDefenseCardsRef = useRef(false);
@@ -1000,61 +1000,69 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             drawQueue: [],
         };
         
-        setPlayroomGame(newGameState);
+        updateGame(() => newGameState);
     };
 
-    // Функция рестарта игры
+    // Функция рестарта игры (сохраняет игроков, как в GameBoard.tsx)
     const restartGame = () => {
-        if (!gameState) return;
-        setPlayroomGame({
-            phase: "lobby",
-            hostId: undefined,
-            players: {},
-            hands: {},
-            slots: [null, null, null, null, null, null],
-            defenseSlots: [null, null, null, null, null, null],
-            playerCountAtStart: undefined,
-            winnerId: undefined,
-            startedAt: undefined,
-            deck: [],
-            discardPile: [],
-            maxHandSize: 6,
-            cardsDrawnThisTurn: {},
-            canDrawCards: true,
-            availableTargets: [],
-            factionBonuses: {},
-            targetSelectionMode: false,
-            selectedTarget: undefined,
-            factionEffects: {},
-            activeFactions: [],
-            factionCounter: {},
-            activeFirstAttackFactions: [],
-            usedDefenseCardFactions: {},
-            displayActiveFactions: [],
-            defenseFactionsBuffer: {},
-            minCardPower: 50,
-            maxCardPower: 100,
-            canDefendWithEqualPower: true,
-            turnActions: {
-                canEndTurn: false,
-                canPass: false,
-                canTakeCards: false,
-                canAttack: false,
-                canDefend: false,
-            },
-            turnHistory: [],
-            playerRoles: {},
-            attackPriority: 'attacker',
-            mainAttackerHasPlayed: false,
-            attackerPassed: false,
-            coAttackerPassed: false,
-            attackerBitoPressed: false,
-            coAttackerBitoPressed: false,
-            attackerPasPressed: false,
-            coAttackerPasPressed: false,
-            drawQueue: [],
-            gameInitialized: false,
+        updateGame((prev) => {
+            // Сохраняем игроков и хоста при рестарте
+            return {
+                ...prev,
+                phase: "lobby",
+                // Сохраняем игроков и хоста
+                players: { ...prev.players },
+                hostId: prev.hostId || myId,
+                hands: {},
+                slots: [null, null, null, null, null, null],
+                defenseSlots: [null, null, null, null, null, null],
+                playerCountAtStart: undefined,
+                winnerId: undefined,
+                startedAt: undefined,
+                deck: [],
+                discardPile: [],
+                maxHandSize: 6,
+                cardsDrawnThisTurn: {},
+                canDrawCards: true,
+                availableTargets: [],
+                factionBonuses: {},
+                targetSelectionMode: false,
+                selectedTarget: undefined,
+                factionEffects: {},
+                activeFactions: [],
+                factionCounter: {},
+                activeFirstAttackFactions: [],
+                usedDefenseCardFactions: {},
+                displayActiveFactions: [],
+                defenseFactionsBuffer: {},
+                minCardPower: 50,
+                maxCardPower: 100,
+                canDefendWithEqualPower: true,
+                turnActions: {
+                    canEndTurn: false,
+                    canPass: false,
+                    canTakeCards: false,
+                    canAttack: false,
+                    canDefend: false,
+                },
+                turnHistory: [],
+                playerRoles: {},
+                attackPriority: 'attacker',
+                mainAttackerHasPlayed: false,
+                attackerPassed: false,
+                coAttackerPassed: false,
+                attackerBitoPressed: false,
+                coAttackerBitoPressed: false,
+                attackerPasPressed: false,
+                coAttackerPasPressed: false,
+                drawQueue: [],
+                gameInitialized: false,
+                firstPlayerInfo: undefined,
+            };
         });
+        
+        // Сбрасываем локальные состояния
+        resetTableStates();
     };
 
     // Обработчики drag & drop
