@@ -643,7 +643,19 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         console.log('🎯 Взятие карт: переносим все карты со стола в руку');
 
         // Используем актуальное состояние из playroomGame (как prev в GameBoard.tsx)
-        const prev = playroomGame || gameState;
+        // ВАЖНО: используем playroomGame напрямую, не gameState, чтобы получить актуальное состояние
+        // Если playroomGame пустой, используем INITIAL_GAME_STATE, но это не должно происходить
+        if (!playroomGame) {
+            console.error('❌ playroomGame пустой! Используем INITIAL_GAME_STATE');
+        }
+        const prev = playroomGame || INITIAL_GAME_STATE;
+        
+        console.log('🔍 Актуальное состояние перед взятием карт:', {
+            currentPlayerId,
+            handsBefore: prev.hands[currentPlayerId]?.length || 0,
+            slotsCount: prev.slots?.filter(c => c !== null).length || 0,
+            defenseSlotsCount: prev.defenseSlots?.filter(c => c !== null).length || 0,
+        });
 
         // Собираем все карты со стола (атаки и защиты)
         const attackCards = prev.slots?.filter(card => card !== null) || [];
@@ -662,16 +674,31 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
         // Атомарно обновляем состояние игры: добавляем карты в руку, очищаем стол, сбрасываем состояния, меняем роли, обрабатываем очередь добора
         const newState = { ...prev };
-        const myCards = [...(prev.hands[currentPlayerId] || [])];
+        
+        // Получаем текущую руку защитника из актуального состояния
+        const currentHand = prev.hands[currentPlayerId] || [];
+        console.log('🔍 Текущая рука защитника:', {
+            playerId: currentPlayerId,
+            currentHandLength: currentHand.length,
+            currentHandCards: currentHand.map(c => c.name),
+        });
+        
+        const myCards = [...currentHand];
         const newHand = [...myCards, ...allTableCards];
 
         console.log(`✅ Карты добавлены в руку. Было: ${myCards.length}, стало: ${newHand.length}`);
+        console.log('🔍 Новые карты в руке:', newHand.map(c => c.name));
 
-        // Обновляем руку защитника
+        // Обновляем руку защитника - ВАЖНО: создаем новый объект hands
         newState.hands = {
             ...prev.hands,
             [currentPlayerId]: newHand
         };
+        
+        console.log('🔍 Проверка после обновления hands:', {
+            newHandLength: newState.hands[currentPlayerId]?.length || 0,
+            newHandCards: newState.hands[currentPlayerId]?.map(c => c.name) || [],
+        });
 
         // Очищаем стол
         newState.slots = new Array(6).fill(null);
@@ -773,6 +800,13 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         newState.usedDefenseCardFactions = {};
 
         // Обновляем состояние атомарно
+        console.log('🔍 Состояние после обработки:', {
+            handsAfter: newState.hands[currentPlayerId]?.length || 0,
+            slotsAfter: newState.slots?.filter(c => c !== null).length || 0,
+            defenseSlotsAfter: newState.defenseSlots?.filter(c => c !== null).length || 0,
+            deckRemaining: newState.deck?.length || 0,
+        });
+        
         setPlayroomGame(newState);
 
         // Сбрасываем локальные состояния
