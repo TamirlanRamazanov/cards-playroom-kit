@@ -5,14 +5,26 @@ import type { GameState } from '../../../types';
  * Хук для автоматической регистрации игроков
  * 
  * Регистрирует игрока при подключении и назначает хоста, если его еще нет
+ * Синхронизируется с состоянием PlayroomKit для видимости всех игроков
  */
 export const usePlayerRegistration = (
     myId: string,
-    _gameState: GameState,
-    updateGame: (fn: (prev: GameState) => GameState) => void
+    gameState: GameState,
+    updateGame: (fn: (prev: GameState) => GameState) => void,
+    playroomGameRef: React.MutableRefObject<GameState>
 ) => {
     useEffect(() => {
         if (!myId) return;
+        
+        // Используем playroomGameRef для получения актуального состояния
+        const currentState = playroomGameRef.current;
+        
+        // Проверяем, зарегистрирован ли игрок
+        const players = currentState.players || {};
+        if (players[myId]) {
+            // Игрок уже зарегистрирован - не обновляем состояние
+            return;
+        }
         
         // Регистрируем игрока только если его еще нет
         updateGame((prev) => {
@@ -39,7 +51,6 @@ export const usePlayerRegistration = (
             
             return next;
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [myId]); // Убрали gameState и updateGame из зависимостей, чтобы избежать бесконечных обновлений
+    }, [myId, gameState]); // Добавили gameState для синхронизации с другими игроками
 };
 

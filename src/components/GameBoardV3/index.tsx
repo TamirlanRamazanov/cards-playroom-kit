@@ -35,10 +35,10 @@ interface GameBoardV3Props {
  */
 const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
     // Управление состоянием игры
-    const { gameState, updateGame } = useGameState();
+    const { gameState, updateGame, playroomGameRef } = useGameState();
     
     // Регистрация игроков
-    usePlayerRegistration(myId, gameState, updateGame);
+    usePlayerRegistration(myId, gameState, updateGame, playroomGameRef);
     
     // Определяем режим игры
     const effectiveGameMode = useGameMode(gameState, myId, 'attack');
