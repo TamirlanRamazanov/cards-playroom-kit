@@ -343,8 +343,30 @@ export default function App() {
         setCurrentPage("game");
     };
 
-    const handlePlay3 = () => {
-        setCurrentPage("gameV3");
+    const handlePlay3 = async () => {
+        // Вызываем insertCoin() для подключения к PlayroomKit
+        console.log('🎯 Play 3 нажата, подключаемся...');
+        try {
+            await insertCoin();
+            console.log('✅ insertCoin завершен');
+            setReady(true);
+            
+            // Ждем, пока myId будет готов
+            const checkMyId = () => {
+                const p = myPlayer?.();
+                if (p?.id) {
+                    console.log('✅ myId готов:', p.id);
+                    setCurrentPage("gameV3");
+                } else {
+                    console.log('⏳ Ждем myId...');
+                    setTimeout(checkMyId, 50);
+                }
+            };
+            checkMyId();
+        } catch (error) {
+            console.error('❌ Ошибка при подключении:', error);
+            alert('Ошибка при подключении к игре');
+        }
     };
 
     const handleBackToMainMenu = () => {

@@ -8,7 +8,7 @@ import type { GameState } from '../../../types';
  */
 export const usePlayerRegistration = (
     myId: string,
-    gameState: GameState,
+    _gameState: GameState,
     updateGame: (fn: (prev: GameState) => GameState) => void
 ) => {
     useEffect(() => {
@@ -39,6 +39,7 @@ export const usePlayerRegistration = (
             
             return next;
         });
-    }, [myId, gameState, updateGame]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [myId]); // Убрали gameState и updateGame из зависимостей, чтобы избежать бесконечных обновлений
 };
 
