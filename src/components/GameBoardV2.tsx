@@ -119,38 +119,50 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     const defenseFactionsBuffer = gameState.defenseFactionsBuffer || {};
     
     // Регистрируем игрока при подключении (как в App.tsx) - ВСЕГДА ДО условного return
+    // ВАЖНО: используем playroomGame напрямую, чтобы избежать перезаписи состояния
     useEffect(() => {
         if (!myId) return;
-        if (!gameState) return;
         
-        // Проверяем, зарегистрирован ли игрок
-        const players = gameState.players || {};
-        if (players[myId]) {
-            // Игрок уже зарегистрирован
+        // Если мы сами обновляем playroomGame, пропускаем регистрацию
+        if (isUpdatingPlayroomGameRef.current) {
+            isUpdatingPlayroomGameRef.current = false;
             return;
         }
         
-        // Регистрируем игрока в gameState
+        // Используем playroomGame напрямую, чтобы получить актуальное состояние
+        const currentState = playroomGame || INITIAL_GAME_STATE;
+        
+        // Проверяем, зарегистрирован ли игрок
+        const players = currentState.players || {};
+        if (players[myId]) {
+            // Игрок уже зарегистрирован - не обновляем состояние
+            return;
+        }
+        
+        // Регистрируем игрока только если его еще нет
         const newPlayers = { ...players };
         newPlayers[myId] = { name: `Player ${myId.slice(-4)}` };
         console.log(`✅ Игрок ${myId} зарегистрирован в GameBoardV2`);
         
         const next: GameState = { 
-            ...gameState, 
+            ...currentState, 
             players: newPlayers,
             // Назначаем хоста, если его еще нет
-            hostId: gameState.hostId || myId,
+            hostId: currentState.hostId || myId,
         };
         
-        if (!gameState.hostId) {
+        if (!currentState.hostId) {
             console.log(`👑 Игрок ${myId} назначен хостом`);
         }
         
         setPlayroomGame(next);
-    }, [myId, gameState, setPlayroomGame]);
+    }, [myId, playroomGame, setPlayroomGame]);
 
     // Ref для отслеживания того, что мы сами обновляем defenseCards
     const isUpdatingDefenseCardsRef = useRef(false);
+    
+    // Ref для отслеживания того, что мы сами обновляем playroomGame (чтобы избежать перезаписи)
+    const isUpdatingPlayroomGameRef = useRef(false);
     
     // Синхронизация defenseCards с gameState.defenseSlots
     // Но только если мы не обновляем их сами (чтобы избежать race condition)
@@ -837,7 +849,14 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
             finalHandsCards: finalState.hands[currentPlayerId]?.map(c => c.name) || [],
         });
         
+        // Устанавливаем флаг, чтобы предотвратить перезапись состояния в useEffect
+        isUpdatingPlayroomGameRef.current = true;
         setPlayroomGame(finalState);
+        
+        // Сбрасываем флаг через небольшую задержку, чтобы дать время для обновления
+        setTimeout(() => {
+            isUpdatingPlayroomGameRef.current = false;
+        }, 200);
         
         // Проверяем состояние сразу после обновления
         setTimeout(() => {
