@@ -164,6 +164,16 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
     // Ref для отслеживания того, что мы сами обновляем playroomGame (чтобы избежать перезаписи)
     const isUpdatingPlayroomGameRef = useRef(false);
     
+    // Ref для хранения актуального состояния playroomGame (для атомарных обновлений)
+    const playroomGameRef = useRef<GameState>(playroomGame || INITIAL_GAME_STATE);
+    
+    // Синхронизируем ref с playroomGame при каждом обновлении
+    useEffect(() => {
+        if (playroomGame) {
+            playroomGameRef.current = playroomGame;
+        }
+    }, [playroomGame]);
+    
     // Синхронизация defenseCards с gameState.defenseSlots
     // Но только если мы не обновляем их сами (чтобы избежать race condition)
     useEffect(() => {
@@ -654,13 +664,9 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
 
         console.log('🎯 Взятие карт: переносим все карты со стола в руку');
 
-        // Используем актуальное состояние из playroomGame (как prev в GameBoard.tsx)
-        // ВАЖНО: используем playroomGame напрямую, не gameState, чтобы получить актуальное состояние
-        // Если playroomGame пустой, используем INITIAL_GAME_STATE, но это не должно происходить
-        if (!playroomGame) {
-            console.error('❌ playroomGame пустой! Используем INITIAL_GAME_STATE');
-        }
-        const prev = playroomGame || INITIAL_GAME_STATE;
+        // ВАЖНО: используем playroomGameRef.current для получения актуального состояния
+        // Это гарантирует, что мы работаем с самым последним состоянием, даже если playroomGame еще не обновился
+        const prev = playroomGameRef.current;
         
         console.log('🔍 Актуальное состояние перед взятием карт:', {
             currentPlayerId,
@@ -851,6 +857,11 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         
         // Устанавливаем флаг, чтобы предотвратить перезапись состояния в useEffect
         isUpdatingPlayroomGameRef.current = true;
+        
+        // Обновляем ref сразу, чтобы последующие операции использовали актуальное состояние
+        playroomGameRef.current = finalState;
+        
+        // Обновляем PlayroomKit
         setPlayroomGame(finalState);
         
         // Сбрасываем флаг через небольшую задержку, чтобы дать время для обновления
@@ -860,7 +871,7 @@ const GameBoardV2: React.FC<GameBoardV2Props> = ({ myId, onBack }) => {
         
         // Проверяем состояние сразу после обновления
         setTimeout(() => {
-            const updatedState = playroomGame || INITIAL_GAME_STATE;
+            const updatedState = playroomGameRef.current;
             console.log('🔍 Состояние после setPlayroomGame (через 100ms):', {
                 handsAfter: updatedState.hands[currentPlayerId]?.length || 0,
                 slotsAfter: updatedState.slots?.filter(c => c !== null).length || 0,
