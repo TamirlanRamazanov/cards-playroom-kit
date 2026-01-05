@@ -343,7 +343,7 @@ export default function App() {
         setCurrentPage("game");
     };
 
-    const handleTestPlay3 = () => {
+    const handlePlay3 = () => {
         setCurrentPage("gameV3");
     };
 
@@ -375,7 +375,7 @@ export default function App() {
     if (currentPage === "mainMenu") {
         return <MainMenu 
             onStartGame={handleStartGame} 
-            onTestPlay3={handleTestPlay3}
+            onPlay3={handlePlay3}
             onDebugGameV2={() => setCurrentPage("debug")}
             onGameV2={async () => {
                 // Вызываем insertCoin() вручную, как в коммите 38efa1e (кнопка Launch)

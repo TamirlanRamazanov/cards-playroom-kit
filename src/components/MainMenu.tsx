@@ -3,12 +3,12 @@ import LoadingScreen from './LoadingScreen';
 
 interface MainMenuProps {
     onStartGame: () => void;
-    onTestPlay3?: () => void;
+    onPlay3?: () => void;
     onDebugGameV2: () => void;
     onGameV2?: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGameV2, onGameV2 }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onPlay3, onDebugGameV2, onGameV2 }) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -180,9 +180,9 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGa
 
                 {/* Примеры других кнопок - раскомментируйте и настройте по необходимости */}
                 
-                {onTestPlay3 && (
+                {onPlay3 && (
                     <button
-                        onClick={onTestPlay3}
+                        onClick={onPlay3}
                         style={{
                             position: "absolute",
                             top: "68.5%", // Настройте позицию
@@ -206,7 +206,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGa
                             paddingBottom: "3%",  
                         }}
                     >
-                        Test Play 3
+                        Play 3
                     </button>
                 )}
 
@@ -239,7 +239,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGa
                 </button>
 
                 <button
-                    onClick={() => console.log("Rules clicked")}
+                    onClick={onDebugGameV2}
                     style={{
                         position: "absolute",
                         top: "82%", // Настройте позицию
@@ -263,7 +263,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGa
                         paddingBottom: "3%",  
                     }}
                 >
-                    Rules
+                    Debug V2
                 </button>
 
                 {onGameV2 ? (
