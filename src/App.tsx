@@ -3,6 +3,7 @@ import { insertCoin, myPlayer, useMultiplayerState } from "playroomkit";
 import type { GameState } from "./types";
 import GameBoard from "./components/GameBoard";
 import GameBoardV2 from "./components/GameBoardV2";
+import GameBoardV3 from "./components/GameBoardV3";
 import MainMenu from "./components/MainMenu";
 import DebugGameBoard from "./components/DebugGameBoard";
 // import DebugGameBoardV2 from "./components/DebugGameBoardV2";
@@ -226,7 +227,7 @@ const createGameWithDeck = (currentGame: GameState): GameState => {
 
 export default function App() {
     const [ready, setReady] = useState(false);
-    const [currentPage, setCurrentPage] = useState<"mainMenu" | "game" | "gameV2" | "debug">("mainMenu");
+    const [currentPage, setCurrentPage] = useState<"mainMenu" | "game" | "gameV2" | "gameV3" | "debug">("mainMenu");
 
     // Zustand store
     const { game: zustandGame, setGame: setZustandGame, updateGame: updateZustandGame } = useGameStore();
@@ -342,8 +343,8 @@ export default function App() {
         setCurrentPage("game");
     };
 
-    const handleDebugGame = () => {
-        setCurrentPage("debug");
+    const handleTestPlay3 = () => {
+        setCurrentPage("gameV3");
     };
 
     const handleBackToMainMenu = () => {
@@ -374,7 +375,7 @@ export default function App() {
     if (currentPage === "mainMenu") {
         return <MainMenu 
             onStartGame={handleStartGame} 
-            onDebugGame={handleDebugGame} 
+            onTestPlay3={handleTestPlay3}
             onDebugGameV2={() => setCurrentPage("debug")}
             onGameV2={async () => {
                 // Вызываем insertCoin() вручную, как в коммите 38efa1e (кнопка Launch)
@@ -407,6 +408,26 @@ export default function App() {
     // Отображаем debug страницу
     if (currentPage === "debug") {
         return <DebugGameBoard onBack={handleBackToMainMenu} />;
+    }
+
+    // Отображаем GameBoardV3 (модульная версия)
+    if (currentPage === "gameV3") {
+        if (!ready || !myId) {
+            return (
+                <div style={{
+                    width: "100vw",
+                    height: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#1a1a2e",
+                    color: "#fff"
+                }}>
+                    Подключение к комнате...
+                </div>
+            );
+        }
+        return <GameBoardV3 myId={myId} onBack={handleBackToMainMenu} />;
     }
 
     // Отображаем GameBoardV2 (постоянная комната, без промежуточных меню)

@@ -1,0 +1,194 @@
+{
+  "main": {
+    "id": "d1063455cbfa04fc",
+    "type": "split",
+    "children": [
+      {
+        "id": "9167cda23143e555",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4441182b2848cccc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "MODULAR_ARCHITECTURE.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "MODULAR_ARCHITECTURE"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "4aca09d0b65e4baf",
+    "type": "split",
+    "children": [
+      {
+        "id": "84da65cb82b05201",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a2cdbfc01b26a057",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "0bc93092737a7696",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "99e12fe4f28ed4c6",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8741736cf2afed3d",
+    "type": "split",
+    "children": [
+      {
+        "id": "b4170a6bc186cd5c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "cf862d528cb0567f",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "MODULAR_ARCHITECTURE.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for MODULAR_ARCHITECTURE"
+            }
+          },
+          {
+            "id": "8d1b5ffc77897812",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "MODULAR_ARCHITECTURE.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from MODULAR_ARCHITECTURE"
+            }
+          },
+          {
+            "id": "5cdf844b045bca45",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "51ce3703cad270ee",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "d43de5cee3514c49",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "MODULAR_ARCHITECTURE.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of MODULAR_ARCHITECTURE"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "4441182b2848cccc",
+  "lastOpenFiles": [
+    "dist/index.html",
+    "dist/assets/index-W4gkdONb.js",
+    "dist/assets/index-Bp4evhPq.js",
+    "dist/assets/index-BSL5J97t.css",
+    "dist/assets"
+  ]
+}

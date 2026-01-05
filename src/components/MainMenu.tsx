@@ -3,12 +3,12 @@ import LoadingScreen from './LoadingScreen';
 
 interface MainMenuProps {
     onStartGame: () => void;
-    onDebugGame: () => void;
+    onTestPlay3?: () => void;
     onDebugGameV2: () => void;
     onGameV2?: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGameV2, onGameV2 }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onTestPlay3, onDebugGameV2, onGameV2 }) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -180,33 +180,35 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onDebugGame, onDebugGa
 
                 {/* Примеры других кнопок - раскомментируйте и настройте по необходимости */}
                 
-                <button
-                    onClick={onDebugGame}
-                    style={{
-                        position: "absolute",
-                        top: "68.5%", // Настройте позицию
-                        left: "50%", // Настройте позицию
-                        transform: "translate(-50%, -50%) rotate(4deg)",
-                        width: "75%", // 20% от ширины изображения
-                        height: "8%", // 8% от высоты изображения
-                        border: "none", //"2px solid blue", // Временно видимая граница
-                        background: "transparent", //"rgba(0, 0, 255, 0.3)", // Временно видимый фон
-                        cursor: "pointer",
-                        fontSize: "clamp(8px, 3vw, 64px)",
-                        fontWeight: "bold",
-                        color: "#8B0000",
-                        fontFamily: "Pirata One, cursive",
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-                        zIndex: 4,
+                {onTestPlay3 && (
+                    <button
+                        onClick={onTestPlay3}
+                        style={{
+                            position: "absolute",
+                            top: "68.5%", // Настройте позицию
+                            left: "50%", // Настройте позицию
+                            transform: "translate(-50%, -50%) rotate(4deg)",
+                            width: "75%", // 20% от ширины изображения
+                            height: "8%", // 8% от высоты изображения
+                            border: "none", //"2px solid blue", // Временно видимая граница
+                            background: "transparent", //"rgba(0, 0, 255, 0.3)", // Временно видимый фон
+                            cursor: "pointer",
+                            fontSize: "clamp(8px, 3vw, 64px)",
+                            fontWeight: "bold",
+                            color: "#8B0000",
+                            fontFamily: "Pirata One, cursive",
+                            textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+                            zIndex: 4,
 
-                        display: "flex",
-                        alignItems: "flex-end",      /* Позиционируем от низа */
-                        justifyContent: "center",    /* Горизонтальное центрирование */
-                        paddingBottom: "3%",  
-                    }}
-                >
-                    Debug
-                </button>
+                            display: "flex",
+                            alignItems: "flex-end",      /* Позиционируем от низа */
+                            justifyContent: "center",    /* Горизонтальное центрирование */
+                            paddingBottom: "3%",  
+                        }}
+                    >
+                        Test Play 3
+                    </button>
+                )}
 
                 <button
                     onClick={onDebugGameV2}
