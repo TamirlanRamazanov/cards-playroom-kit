@@ -7,7 +7,7 @@ import { useCardDragDrop } from './hooks/useCardDragDrop';
 import { createGame, restartGame } from './modules/gameInitialization';
 import { getCurrentPlayerRole } from './modules/roleSystem';
 import { checkCanTakeCards, handleTakeCards } from './modules/cardManagement';
-import { handleBito, hasUnbeatenCards, canPressBito, checkTurnComplete } from './modules/turnSystem';
+import { handleBito, hasUnbeatenCards, canPressBito, canPressPas, handlePas, completeTurn } from './modules/turnSystem';
 import { rotateRolesAfterTakeCards } from './modules/roleSystem';
 import { processDrawQueue } from './modules/drawQueue';
 import { GameControls } from './components/GameControls';
@@ -93,8 +93,9 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
         }
     }, [gameState.slots]);
     
-    // Состояние для кнопки "Бито"
+    // Состояние для кнопок "Бито" и "Пас"
     const [canBito, setCanBito] = useState<boolean>(false);
+    const [canPas, setCanPas] = useState<boolean>(false);
     
     // Проверка возможности взять карты
     useEffect(() => {
@@ -110,6 +111,13 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
         const canPress = canPressBito(gameState, role, () => hasUnbeaten);
         setCanBito(canPress);
     }, [gameState.slots, gameState.defenseSlots, gameState.mainAttackerHasPlayed, gameState.attackerBitoPressed, gameState.coAttackerBitoPressed, gameState.attackerPassed, gameState.coAttackerPassed, gameState.players, defenseCards, myId]);
+    
+    // Проверка возможности нажать Пас
+    useEffect(() => {
+        const role = getCurrentPlayerRole(gameState, myId);
+        const canPress = canPressPas(gameState, role);
+        setCanPas(canPress);
+    }, [gameState.attackerBitoPressed, gameState.coAttackerBitoPressed, gameState.attackerPassed, gameState.coAttackerPassed, gameState.players, myId]);
     
     // Глобальный сенсор для карт (как в GameBoardV2)
     useEffect(() => {
@@ -254,55 +262,56 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
     
     const handleBitoClick = () => {
         const role = getCurrentPlayerRole(gameState, myId);
-        
-        // Детальные проверки с сообщениями (как в GameBoardV2)
-        if (!role || (role !== 'attacker' && role !== 'co-attacker')) {
-            console.log('❌ Только атакующие игроки могут нажимать Бито');
-            alert('❌ Только атакующие игроки могут нажимать Бито');
-            return;
-        }
-        
-        if (!gameState.mainAttackerHasPlayed) {
-            console.log('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
-            alert('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
-            return;
-        }
-        
         const hasUnbeaten = hasUnbeatenCards(gameState, defenseCards);
-        console.log('🎯 Проверка Бито - есть ли неотбитые карты:', hasUnbeaten);
-        if (hasUnbeaten) {
-            console.log('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
-            alert('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
-            return;
-        }
         
-        // Проверка, не заблокирована ли кнопка
-        if (role === 'attacker' && gameState.attackerBitoPressed) {
-            console.log('❌ Кнопка Бито уже нажата главным атакующим');
-            return;
-        }
-        if (role === 'co-attacker' && gameState.coAttackerBitoPressed) {
-            console.log('❌ Кнопка Бито уже нажата со-атакующим');
-            return;
-        }
+        const result = handleBito(gameState, role, () => hasUnbeaten);
         
-        const newState = handleBito(gameState, role, () => hasUnbeaten);
-        
-        if (newState) {
-            updateGame(() => newState);
-            const newPriority = newState.attackPriority === 'attacker' ? 'главному атакующему' : 'со-атакующему';
-            console.log(`✅ Бито: приоритет передан ${newPriority}`);
+        if (result) {
+            const { newState, endTurn } = result;
             
-            // Проверяем, завершился ли ход (оба нажали Бито)
-            if (checkTurnComplete(newState, defenseCards)) {
-                console.log('🎯 Ход завершен - оба атакующих нажали Бито');
-                alert('🎯 Ход завершен! Оба атакующих нажали Бито. Карты отбиты.');
-                // Здесь можно добавить логику завершения хода (очистка стола, добор карт)
+            if (endTurn) {
+                // Завершаем ход
+                console.log('🎯 Бито нажато - завершение хода');
+                const completedState = completeTurn(newState, rotateRolesAfterTakeCards, processDrawQueue);
+                updateGame(() => completedState);
+                setDefenseCards([]);
+                alert('✅ Бито! Ход завершен, роли обновлены.');
             } else {
+                // Просто передаем приоритет
+                updateGame(() => newState);
+                const newPriority = newState.attackPriority === 'attacker' ? 'главному атакующему' : 'со-атакующему';
+                console.log(`✅ Бито: приоритет передан ${newPriority}`);
                 alert(`✅ Бито: приоритет передан ${newPriority}`);
             }
         } else {
             console.log('❌ Не удалось выполнить Бито');
+        }
+    };
+    
+    const handlePasClick = () => {
+        const role = getCurrentPlayerRole(gameState, myId);
+        
+        const result = handlePas(gameState, role);
+        
+        if (result) {
+            const { newState, endTurn } = result;
+            
+            if (endTurn) {
+                // Завершаем ход
+                console.log('🎯 Пас нажат - оба отказались, завершение хода');
+                const completedState = completeTurn(newState, rotateRolesAfterTakeCards, processDrawQueue);
+                updateGame(() => completedState);
+                setDefenseCards([]);
+                alert('✅ Оба атакующих нажали Пас! Ход завершен, роли обновлены.');
+            } else {
+                // Просто отмечаем Пас
+                updateGame(() => newState);
+                console.log(`✅ Пас нажат`);
+                alert(`✅ Пас нажат - больше не будете подкидывать карты`);
+            }
+        } else {
+            console.log('❌ Не удалось нажать Пас');
+            alert('❌ Пас недоступен. Сначала нажмите Бито хотя бы раз.');
         }
     };
     
@@ -357,14 +366,19 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                     playerRole={role}
                     canTakeCards={canTakeCards}
                     canBito={canBito}
+                    canPas={canPas}
                     attackPriority={gameState.attackPriority}
                     attackerBitoPressed={gameState.attackerBitoPressed || false}
                     coAttackerBitoPressed={gameState.coAttackerBitoPressed || false}
+                    attackerPassed={gameState.attackerPassed || false}
+                    coAttackerPassed={gameState.coAttackerPassed || false}
                     mainAttackerHasPlayed={gameState.mainAttackerHasPlayed || false}
+                    playerCount={Object.keys(gameState.players || {}).length}
                     onStartGame={handleCreateGame}
                     onRestartGame={handleRestartGame}
                     onTakeCards={handleTakeCardsClick}
                     onBito={handleBitoClick}
+                    onPas={handlePasClick}
                     showSensorCircle={showSensorCircle}
                     onToggleSensor={() => setShowSensorCircle(!showSensorCircle)}
                     onBack={onBack}

@@ -7,14 +7,19 @@ interface GameControlsProps {
     playerRole: 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined;
     canTakeCards: boolean;
     canBito: boolean;
+    canPas: boolean;
     attackPriority: 'attacker' | 'co-attacker';
     attackerBitoPressed: boolean;
     coAttackerBitoPressed: boolean;
+    attackerPassed: boolean;
+    coAttackerPassed: boolean;
     mainAttackerHasPlayed: boolean;
+    playerCount: number;
     onStartGame: () => void;
     onRestartGame: () => void;
     onTakeCards: () => void;
     onBito: () => void;
+    onPas: () => void;
     showSensorCircle: boolean;
     onToggleSensor: () => void;
     onBack?: () => void;
@@ -34,14 +39,19 @@ export const GameControls: React.FC<GameControlsProps> = ({
     playerRole,
     canTakeCards,
     canBito,
+    canPas,
     attackPriority,
     attackerBitoPressed,
     coAttackerBitoPressed,
+    attackerPassed,
+    coAttackerPassed,
     mainAttackerHasPlayed,
+    playerCount,
     onStartGame,
     onRestartGame,
     onTakeCards,
     onBito,
+    onPas,
     showSensorCircle,
     onToggleSensor,
     onBack,
@@ -118,62 +128,127 @@ export const GameControls: React.FC<GameControlsProps> = ({
                         🃏 Взять карты
                     </button>
                     
-                    <button 
-                        onClick={onBito}
-                        disabled={!canBito}
-                        style={{
-                            padding: "8px 12px",
-                            background: canBito ? "#8b5cf6" : "#6b7280",
-                            border: "none",
-                            borderRadius: "6px",
-                            color: "#fff",
-                            cursor: canBito ? "pointer" : "not-allowed",
-                            fontSize: "12px",
-                            opacity: canBito ? 1 : 0.5,
-                            position: "relative"
-                        }}
-                        title={
-                            !canBito && playerRole === 'attacker' && attackerBitoPressed 
-                                ? "Вы уже нажали Бито" 
-                                : !canBito && playerRole === 'co-attacker' && coAttackerBitoPressed 
-                                ? "Вы уже нажали Бито" 
-                                : !canBito 
-                                ? "Бито недоступно" 
-                                : "Передать приоритет"
-                        }
-                    >
-                        🚫 Бито
-                        {playerRole === 'attacker' && attackerBitoPressed && (
-                            <span style={{ 
-                                position: "absolute", 
-                                top: "-5px", 
-                                right: "-5px", 
-                                background: "#10b981", 
-                                borderRadius: "50%", 
-                                width: "16px", 
-                                height: "16px", 
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center",
-                                fontSize: "10px"
-                            }}>✓</span>
-                        )}
-                        {playerRole === 'co-attacker' && coAttackerBitoPressed && (
-                            <span style={{ 
-                                position: "absolute", 
-                                top: "-5px", 
-                                right: "-5px", 
-                                background: "#10b981", 
-                                borderRadius: "50%", 
-                                width: "16px", 
-                                height: "16px", 
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center",
-                                fontSize: "10px"
-                            }}>✓</span>
-                        )}
-                    </button>
+                    {/* Кнопка Бито (для 2+ игроков) */}
+                    {playerCount >= 2 && (playerRole === 'attacker' || playerRole === 'co-attacker') && (
+                        <button 
+                            onClick={onBito}
+                            disabled={!canBito}
+                            style={{
+                                padding: "8px 12px",
+                                background: canBito ? "#8b5cf6" : "#6b7280",
+                                border: "none",
+                                borderRadius: "6px",
+                                color: "#fff",
+                                cursor: canBito ? "pointer" : "not-allowed",
+                                fontSize: "12px",
+                                opacity: canBito ? 1 : 0.5,
+                                position: "relative"
+                            }}
+                            title={
+                                playerCount === 2 
+                                    ? "Завершить ход" 
+                                    : !canBito && playerRole === 'attacker' && attackerBitoPressed 
+                                    ? "Вы уже нажали Бито" 
+                                    : !canBito && playerRole === 'co-attacker' && coAttackerBitoPressed 
+                                    ? "Вы уже нажали Бито" 
+                                    : !canBito 
+                                    ? "Бито недоступно" 
+                                    : "Передать приоритет"
+                            }
+                        >
+                            🚫 Бито {playerCount === 2 && "(Завершить ход)"}
+                            {playerRole === 'attacker' && attackerBitoPressed && playerCount > 2 && (
+                                <span style={{ 
+                                    position: "absolute", 
+                                    top: "-5px", 
+                                    right: "-5px", 
+                                    background: "#10b981", 
+                                    borderRadius: "50%", 
+                                    width: "16px", 
+                                    height: "16px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    fontSize: "10px"
+                                }}>✓</span>
+                            )}
+                            {playerRole === 'co-attacker' && coAttackerBitoPressed && playerCount > 2 && (
+                                <span style={{ 
+                                    position: "absolute", 
+                                    top: "-5px", 
+                                    right: "-5px", 
+                                    background: "#10b981", 
+                                    borderRadius: "50%", 
+                                    width: "16px", 
+                                    height: "16px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    fontSize: "10px"
+                                }}>✓</span>
+                            )}
+                        </button>
+                    )}
+                    
+                    {/* Кнопка Пас (только для 3+ игроков, только после нажатия Бито) */}
+                    {playerCount >= 3 && (playerRole === 'attacker' || playerRole === 'co-attacker') && (
+                        <button 
+                            onClick={onPas}
+                            disabled={!canPas}
+                            style={{
+                                padding: "8px 12px",
+                                background: canPas ? "#3b82f6" : "#6b7280",
+                                border: "none",
+                                borderRadius: "6px",
+                                color: "#fff",
+                                cursor: canPas ? "pointer" : "not-allowed",
+                                fontSize: "12px",
+                                opacity: canPas ? 1 : 0.5,
+                                position: "relative"
+                            }}
+                            title={
+                                !canPas && playerRole === 'attacker' && attackerPassed 
+                                    ? "Вы уже нажали Пас" 
+                                    : !canPas && playerRole === 'co-attacker' && coAttackerPassed 
+                                    ? "Вы уже нажали Пас" 
+                                    : !canPas 
+                                    ? "Сначала нажмите Бито" 
+                                    : "Отказаться от атаки"
+                            }
+                        >
+                            ✋ Пас
+                            {playerRole === 'attacker' && attackerPassed && (
+                                <span style={{ 
+                                    position: "absolute", 
+                                    top: "-5px", 
+                                    right: "-5px", 
+                                    background: "#10b981", 
+                                    borderRadius: "50%", 
+                                    width: "16px", 
+                                    height: "16px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    fontSize: "10px"
+                                }}>✓</span>
+                            )}
+                            {playerRole === 'co-attacker' && coAttackerPassed && (
+                                <span style={{ 
+                                    position: "absolute", 
+                                    top: "-5px", 
+                                    right: "-5px", 
+                                    background: "#10b981", 
+                                    borderRadius: "50%", 
+                                    width: "16px", 
+                                    height: "16px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    fontSize: "10px"
+                                }}>✓</span>
+                            )}
+                        </button>
+                    )}
                 </div>
                 
                 {phase === "lobby" || !gameInitialized ? (
