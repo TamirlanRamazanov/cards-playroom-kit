@@ -7,7 +7,7 @@ import { useCardDragDrop } from './hooks/useCardDragDrop';
 import { createGame, restartGame } from './modules/gameInitialization';
 import { getCurrentPlayerRole } from './modules/roleSystem';
 import { checkCanTakeCards, handleTakeCards } from './modules/cardManagement';
-import { handleBito, hasUnbeatenCards } from './modules/turnSystem';
+import { handleBito, hasUnbeatenCards, canPressBito } from './modules/turnSystem';
 import { rotateRolesAfterTakeCards } from './modules/roleSystem';
 import { processDrawQueue } from './modules/drawQueue';
 import { GameControls } from './components/GameControls';
@@ -93,12 +93,23 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
         }
     }, [gameState.slots]);
     
+    // Состояние для кнопки "Бито"
+    const [canBito, setCanBito] = useState<boolean>(false);
+    
     // Проверка возможности взять карты
     useEffect(() => {
         const role = getCurrentPlayerRole(gameState, myId);
         const canTake = checkCanTakeCards(gameState, myId, role);
         setCanTakeCards(canTake);
     }, [effectiveGameMode, gameState.slots, defenseCards, gameState, myId]);
+    
+    // Проверка возможности нажать Бито
+    useEffect(() => {
+        const role = getCurrentPlayerRole(gameState, myId);
+        const hasUnbeaten = hasUnbeatenCards(gameState, defenseCards);
+        const canPress = canPressBito(gameState, role, () => hasUnbeaten);
+        setCanBito(canPress);
+    }, [gameState.slots, gameState.defenseSlots, gameState.mainAttackerHasPlayed, gameState.attackerBitoPressed, gameState.coAttackerBitoPressed, gameState.attackerPassed, gameState.coAttackerPassed, gameState.players, defenseCards, myId]);
     
     // Глобальный сенсор для карт (как в GameBoardV2)
     useEffect(() => {
@@ -243,11 +254,47 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
     
     const handleBitoClick = () => {
         const role = getCurrentPlayerRole(gameState, myId);
+        
+        // Детальные проверки с сообщениями (как в GameBoardV2)
+        if (!role || (role !== 'attacker' && role !== 'co-attacker')) {
+            console.log('❌ Только атакующие игроки могут нажимать Бито');
+            alert('❌ Только атакующие игроки могут нажимать Бито');
+            return;
+        }
+        
+        if (!gameState.mainAttackerHasPlayed) {
+            console.log('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
+            alert('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
+            return;
+        }
+        
         const hasUnbeaten = hasUnbeatenCards(gameState, defenseCards);
+        console.log('🎯 Проверка Бито - есть ли неотбитые карты:', hasUnbeaten);
+        if (hasUnbeaten) {
+            console.log('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
+            alert('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
+            return;
+        }
+        
+        // Проверка, не заблокирована ли кнопка
+        if (role === 'attacker' && gameState.attackerBitoPressed) {
+            console.log('❌ Кнопка Бито уже нажата главным атакующим');
+            return;
+        }
+        if (role === 'co-attacker' && gameState.coAttackerBitoPressed) {
+            console.log('❌ Кнопка Бито уже нажата со-атакующим');
+            return;
+        }
+        
         const newState = handleBito(gameState, role, () => hasUnbeaten);
         
         if (newState) {
             updateGame(() => newState);
+            const newPriority = newState.attackPriority === 'attacker' ? 'главному атакующему' : 'со-атакующему';
+            console.log(`✅ Бито: приоритет передан ${newPriority}`);
+            alert(`✅ Бито: приоритет передан ${newPriority}`);
+        } else {
+            console.log('❌ Не удалось выполнить Бито');
         }
     };
     
@@ -301,6 +348,7 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                     effectiveGameMode={effectiveGameMode}
                     playerRole={role}
                     canTakeCards={canTakeCards}
+                    canBito={canBito}
                     onStartGame={handleCreateGame}
                     onRestartGame={handleRestartGame}
                     onTakeCards={handleTakeCardsClick}

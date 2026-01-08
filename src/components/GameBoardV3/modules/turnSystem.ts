@@ -65,38 +65,69 @@ export const hasUnbeatenCards = (
 };
 
 /**
+ * Проверяет, можно ли нажать кнопку "Бито"
+ */
+export const canPressBito = (
+    gameState: GameState,
+    playerRole: 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined,
+    hasUnbeatenCardsFn: () => boolean
+): boolean => {
+    // Только атакующие игроки могут нажимать Бито
+    if (!playerRole || (playerRole !== 'attacker' && playerRole !== 'co-attacker')) {
+        return false;
+    }
+
+    // Для 2 игроков Бито не показываем (только Пас)
+    const playerCount = Object.keys(gameState.players || {}).length;
+    if (playerCount === 2) {
+        return false;
+    }
+
+    // Нельзя нажимать Бито, если кто-то уже нажал Пас
+    if (gameState.attackerPassed || gameState.coAttackerPassed) {
+        return false;
+    }
+
+    // Главный атакующий должен сначала подкинуть хотя бы одну карту
+    if (!gameState.mainAttackerHasPlayed) {
+        return false;
+    }
+
+    // Нельзя нажимать Бито пока есть неотбитые карты на столе
+    if (hasUnbeatenCardsFn()) {
+        return false;
+    }
+
+    // Проверяем, не заблокирована ли кнопка для текущего игрока
+    if (playerRole === 'attacker' && gameState.attackerBitoPressed) {
+        return false;
+    }
+    if (playerRole === 'co-attacker' && gameState.coAttackerBitoPressed) {
+        return false;
+    }
+
+    return true;
+};
+
+/**
  * Обработка кнопки "Бито" (передача приоритета между атакующими)
+ * 
+ * Логика:
+ * 1. Атакующий нажимает Бито -> приоритет переходит к со-атакующему
+ * 2. Со-атакующий нажимает Бито -> приоритет возвращается к атакующему
+ * 3. Если оба нажали Бито, то защитник может взять карты или ход завершается
  */
 export const handleBito = (
     gameState: GameState,
     playerRole: 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined,
     hasUnbeatenCardsFn: () => boolean
 ): GameState | null => {
-    if (!playerRole || (playerRole !== 'attacker' && playerRole !== 'co-attacker')) {
-        alert('❌ Только атакующие игроки могут нажимать Бито');
+    if (!canPressBito(gameState, playerRole, hasUnbeatenCardsFn)) {
+        console.log('❌ Нельзя нажать Бито в данный момент');
         return null;
     }
 
-    if (!gameState.mainAttackerHasPlayed) {
-        alert('❌ Главный атакующий должен сначала подкинуть хотя бы одну карту');
-        return null;
-    }
-
-    // Проверяем, есть ли неотбитые карты на столе
-    if (hasUnbeatenCardsFn()) {
-        alert('❌ Нельзя нажимать Бито пока есть неотбитые карты на столе');
-        return null;
-    }
-
-    // Проверяем, не заблокирована ли кнопка
-    if (playerRole === 'attacker' && gameState.attackerBitoPressed) {
-        return null;
-    }
-    if (playerRole === 'co-attacker' && gameState.coAttackerBitoPressed) {
-        return null;
-    }
-
-    // Обычная логика передачи приоритета
+    // Логика передачи приоритета
     const newPriority = gameState.attackPriority === 'attacker' ? 'co-attacker' : 'attacker';
 
     // Блокируем кнопку Бито для текущего игрока и разблокируем для другого
@@ -107,9 +138,11 @@ export const handleBito = (
     if (playerRole === 'attacker') {
         updates.attackerBitoPressed = true;
         updates.coAttackerBitoPressed = false;
+        console.log('✅ Главный атакующий нажал Бито, приоритет передан со-атакующему');
     } else if (playerRole === 'co-attacker') {
         updates.coAttackerBitoPressed = true;
         updates.attackerBitoPressed = false;
+        console.log('✅ Со-атакующий нажал Бито, приоритет передан главному атакующему');
     }
 
     return {

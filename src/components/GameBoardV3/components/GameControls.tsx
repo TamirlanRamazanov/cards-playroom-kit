@@ -6,6 +6,7 @@ interface GameControlsProps {
     effectiveGameMode: 'attack' | 'defense';
     playerRole: 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined;
     canTakeCards: boolean;
+    canBito: boolean;
     onStartGame: () => void;
     onRestartGame: () => void;
     onTakeCards: () => void;
@@ -28,6 +29,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
     effectiveGameMode,
     playerRole,
     canTakeCards,
+    canBito,
     onStartGame,
     onRestartGame,
     onTakeCards,
@@ -89,14 +91,16 @@ export const GameControls: React.FC<GameControlsProps> = ({
                     
                     <button 
                         onClick={onBito}
+                        disabled={!canBito}
                         style={{
                             padding: "8px 12px",
-                            background: "#8b5cf6",
+                            background: canBito ? "#8b5cf6" : "#6b7280",
                             border: "none",
                             borderRadius: "6px",
                             color: "#fff",
-                            cursor: "pointer",
-                            fontSize: "12px"
+                            cursor: canBito ? "pointer" : "not-allowed",
+                            fontSize: "12px",
+                            opacity: canBito ? 1 : 0.5
                         }}
                     >
                         🚫 Бито
