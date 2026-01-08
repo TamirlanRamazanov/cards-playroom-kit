@@ -139,15 +139,41 @@ export const handleBito = (
         updates.attackerBitoPressed = true;
         updates.coAttackerBitoPressed = false;
         console.log('✅ Главный атакующий нажал Бито, приоритет передан со-атакующему');
+        
+        // Если со-атакующий уже нажал Бито ранее, то оба отказались атаковать
+        if (gameState.coAttackerBitoPressed) {
+            console.log('🎯 Оба атакующих нажали Бито - ход завершается');
+        }
     } else if (playerRole === 'co-attacker') {
         updates.coAttackerBitoPressed = true;
         updates.attackerBitoPressed = false;
         console.log('✅ Со-атакующий нажал Бито, приоритет передан главному атакующему');
+        
+        // Если главный атакующий уже нажал Бито ранее, то оба отказались атаковать
+        if (gameState.attackerBitoPressed) {
+            console.log('🎯 Оба атакующих нажали Бито - ход завершается');
+        }
     }
 
     return {
         ...gameState,
         ...updates,
     };
+};
+
+/**
+ * Проверяет, завершился ли ход (оба атакующих нажали Бито)
+ */
+export const checkTurnComplete = (
+    gameState: GameState,
+    defenseCards: (import('../../../types').Card | null)[]
+): boolean => {
+    // Проверяем, что все карты отбиты
+    const allDefended = !hasUnbeatenCards(gameState, defenseCards);
+    
+    // Проверяем, что оба атакующих нажали Бито
+    const bothBitoPressed = gameState.attackerBitoPressed && gameState.coAttackerBitoPressed;
+    
+    return allDefended && bothBitoPressed;
 };
 

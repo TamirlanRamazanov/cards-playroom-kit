@@ -7,6 +7,10 @@ interface GameControlsProps {
     playerRole: 'attacker' | 'co-attacker' | 'defender' | 'observer' | undefined;
     canTakeCards: boolean;
     canBito: boolean;
+    attackPriority: 'attacker' | 'co-attacker';
+    attackerBitoPressed: boolean;
+    coAttackerBitoPressed: boolean;
+    mainAttackerHasPlayed: boolean;
     onStartGame: () => void;
     onRestartGame: () => void;
     onTakeCards: () => void;
@@ -30,6 +34,10 @@ export const GameControls: React.FC<GameControlsProps> = ({
     playerRole,
     canTakeCards,
     canBito,
+    attackPriority,
+    attackerBitoPressed,
+    coAttackerBitoPressed,
+    mainAttackerHasPlayed,
     onStartGame,
     onRestartGame,
     onTakeCards,
@@ -58,17 +66,38 @@ export const GameControls: React.FC<GameControlsProps> = ({
             </div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 {gameInitialized && (
-                    <div style={{ 
-                        padding: "6px 12px",
-                        background: effectiveGameMode === 'attack' ? "#dc2626" : "#1d4ed8",
-                        borderRadius: "4px",
-                        fontSize: "11px",
-                        fontWeight: "bold",
-                        color: "#fff"
-                    }}>
-                        {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'}
-                        {playerRole === 'observer' && ' 👁️ Наблюдатель'}
-                    </div>
+                    <>
+                        <div style={{ 
+                            padding: "6px 12px",
+                            background: effectiveGameMode === 'attack' ? "#dc2626" : "#1d4ed8",
+                            borderRadius: "4px",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            color: "#fff"
+                        }}>
+                            {effectiveGameMode === 'attack' ? '⚔️ Режим атаки' : '🛡️ Режим защиты'}
+                            {playerRole === 'observer' && ' 👁️ Наблюдатель'}
+                        </div>
+                        
+                        {/* Индикатор приоритета атаки */}
+                        {(playerRole === 'attacker' || playerRole === 'co-attacker') && mainAttackerHasPlayed && (
+                            <div style={{ 
+                                padding: "6px 12px",
+                                background: attackPriority === playerRole ? "#10b981" : "#6b7280",
+                                borderRadius: "4px",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                color: "#fff",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px"
+                            }}>
+                                {attackPriority === 'attacker' ? '👑 Приоритет: Атакующий' : '🗡️ Приоритет: Со-атакующий'}
+                                {playerRole === 'attacker' && attackerBitoPressed && ' (Бито ✓)'}
+                                {playerRole === 'co-attacker' && coAttackerBitoPressed && ' (Бито ✓)'}
+                            </div>
+                        )}
+                    </>
                 )}
                 
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -100,10 +129,50 @@ export const GameControls: React.FC<GameControlsProps> = ({
                             color: "#fff",
                             cursor: canBito ? "pointer" : "not-allowed",
                             fontSize: "12px",
-                            opacity: canBito ? 1 : 0.5
+                            opacity: canBito ? 1 : 0.5,
+                            position: "relative"
                         }}
+                        title={
+                            !canBito && playerRole === 'attacker' && attackerBitoPressed 
+                                ? "Вы уже нажали Бито" 
+                                : !canBito && playerRole === 'co-attacker' && coAttackerBitoPressed 
+                                ? "Вы уже нажали Бито" 
+                                : !canBito 
+                                ? "Бито недоступно" 
+                                : "Передать приоритет"
+                        }
                     >
                         🚫 Бито
+                        {playerRole === 'attacker' && attackerBitoPressed && (
+                            <span style={{ 
+                                position: "absolute", 
+                                top: "-5px", 
+                                right: "-5px", 
+                                background: "#10b981", 
+                                borderRadius: "50%", 
+                                width: "16px", 
+                                height: "16px", 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center",
+                                fontSize: "10px"
+                            }}>✓</span>
+                        )}
+                        {playerRole === 'co-attacker' && coAttackerBitoPressed && (
+                            <span style={{ 
+                                position: "absolute", 
+                                top: "-5px", 
+                                right: "-5px", 
+                                background: "#10b981", 
+                                borderRadius: "50%", 
+                                width: "16px", 
+                                height: "16px", 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center",
+                                fontSize: "10px"
+                            }}>✓</span>
+                        )}
                     </button>
                 </div>
                 

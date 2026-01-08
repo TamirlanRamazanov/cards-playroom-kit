@@ -7,7 +7,7 @@ import { useCardDragDrop } from './hooks/useCardDragDrop';
 import { createGame, restartGame } from './modules/gameInitialization';
 import { getCurrentPlayerRole } from './modules/roleSystem';
 import { checkCanTakeCards, handleTakeCards } from './modules/cardManagement';
-import { handleBito, hasUnbeatenCards, canPressBito } from './modules/turnSystem';
+import { handleBito, hasUnbeatenCards, canPressBito, checkTurnComplete } from './modules/turnSystem';
 import { rotateRolesAfterTakeCards } from './modules/roleSystem';
 import { processDrawQueue } from './modules/drawQueue';
 import { GameControls } from './components/GameControls';
@@ -292,7 +292,15 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
             updateGame(() => newState);
             const newPriority = newState.attackPriority === 'attacker' ? 'главному атакующему' : 'со-атакующему';
             console.log(`✅ Бито: приоритет передан ${newPriority}`);
-            alert(`✅ Бито: приоритет передан ${newPriority}`);
+            
+            // Проверяем, завершился ли ход (оба нажали Бито)
+            if (checkTurnComplete(newState, defenseCards)) {
+                console.log('🎯 Ход завершен - оба атакующих нажали Бито');
+                alert('🎯 Ход завершен! Оба атакующих нажали Бито. Карты отбиты.');
+                // Здесь можно добавить логику завершения хода (очистка стола, добор карт)
+            } else {
+                alert(`✅ Бито: приоритет передан ${newPriority}`);
+            }
         } else {
             console.log('❌ Не удалось выполнить Бито');
         }
@@ -349,6 +357,10 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                     playerRole={role}
                     canTakeCards={canTakeCards}
                     canBito={canBito}
+                    attackPriority={gameState.attackPriority}
+                    attackerBitoPressed={gameState.attackerBitoPressed || false}
+                    coAttackerBitoPressed={gameState.coAttackerBitoPressed || false}
+                    mainAttackerHasPlayed={gameState.mainAttackerHasPlayed || false}
                     onStartGame={handleCreateGame}
                     onRestartGame={handleRestartGame}
                     onTakeCards={handleTakeCardsClick}
