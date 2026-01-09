@@ -90,22 +90,23 @@ export const handleTakeCards = (
         newState.playerRoles = { ...gameState.playerRoles, ...newRoles };
     }
 
-    // Добавляем защитника в очередь добора карт
-    const currentQueue = [...(gameState.drawQueue || [])];
-    currentQueue.push(currentPlayerId);
-    newState.drawQueue = currentQueue;
+    // Добавляем ВСЕХ игроков в очередь добора карт до 6
+    // Все игроки (включая защитника который взял карты, и атакующих) добирают до 6
+    const playerIds = Object.keys(gameState.players || {});
+    newState.drawQueue = [...playerIds];
 
     // Обрабатываем очередь добора карт
     const { hands: updatedHands, deck: updatedDeck } = processDrawQueue(newState);
     newState.hands = updatedHands;
     newState.deck = updatedDeck;
-    newState.drawQueue = []; // Очищаем очередь после обработки
 
     // Сбрасываем состояния фракций
     newState.factionCounter = {};
     newState.defenseFactionsBuffer = {};
     newState.activeFirstAttackFactions = [];
     newState.usedDefenseCardFactions = {};
+
+    console.log('✅ Ход завершен, карты взяты, все игроки добрали до 6');
 
     return newState;
 };

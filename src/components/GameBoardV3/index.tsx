@@ -256,7 +256,7 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
         );
         
         updateGame(() => newState);
-        setDefenseCards([]);
+        setDefenseCards(new Array(6).fill(null)); // Явно очищаем с правильной длиной
         alert('✅ Взято карт со стола! Роли обновлены.');
     };
     
