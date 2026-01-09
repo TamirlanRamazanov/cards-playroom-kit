@@ -131,6 +131,72 @@ export const rotateRolesAfterTakeCards = (
 };
 
 /**
+ * Меняет роли после успешной защиты (Бито)
+ * 
+ * Для 2 игроков: атакующий ↔ защитник
+ * Для 3 игроков: атакующий → со-атакующий, защитник → атакующий, со-атакующий → защитник
+ * Для 4+ игроков: атакующий → наблюдатель, защитник → атакующий, со-атакующий → защитник, следующий → со-атакующий
+ */
+export const rotateRolesAfterBito = (
+    prev: GameState
+): Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> => {
+    const playerIds = Object.keys(prev.players || {});
+    const playerCount = playerIds.length;
+    const currentRoles = { ...prev.playerRoles };
+    const newRoles: Record<string, 'attacker' | 'co-attacker' | 'defender' | 'observer'> = {};
+
+    if (playerCount === 2) {
+        // 2 игрока: атакующий ↔ защитник
+        const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+        const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
+
+        if (currentAttacker && currentDefender) {
+            newRoles[currentAttacker] = 'defender';
+            newRoles[currentDefender] = 'attacker';
+            console.log('🎯 2 игрока - смена ролей: атакующий ↔ защитник');
+        }
+    } else if (playerCount === 3) {
+        // 3 игрока: атакующий → со-атакующий, защитник → атакующий, со-атакующий → защитник
+        const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+        const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+        const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
+
+        if (currentAttacker && currentCoAttacker && currentDefender) {
+            newRoles[currentDefender] = 'attacker';
+            newRoles[currentCoAttacker] = 'defender';
+            newRoles[currentAttacker] = 'co-attacker';
+            console.log('🎯 3 игрока - смена ролей после Бито');
+        }
+    } else if (playerCount >= 4) {
+        // 4+ игроков: атакующий → наблюдатель, защитник → атакующий, со-атакующий → защитник, следующий → со-атакующий
+        const currentAttacker = playerIds.find(id => currentRoles[id] === 'attacker');
+        const currentCoAttacker = playerIds.find(id => currentRoles[id] === 'co-attacker');
+        const currentDefender = playerIds.find(id => currentRoles[id] === 'defender');
+
+        if (currentAttacker && currentCoAttacker && currentDefender) {
+            const coAttackerIndex = playerIds.indexOf(currentCoAttacker);
+            const nextAfterCoAttacker = playerIds[(coAttackerIndex + 1) % playerIds.length];
+
+            newRoles[currentDefender] = 'attacker';
+            newRoles[currentCoAttacker] = 'defender';
+            newRoles[nextAfterCoAttacker] = 'co-attacker';
+            newRoles[currentAttacker] = 'observer';
+
+            // Остальные остаются наблюдателями
+            playerIds.forEach(id => {
+                if (![currentDefender, currentCoAttacker, nextAfterCoAttacker, currentAttacker].includes(id)) {
+                    newRoles[id] = 'observer';
+                }
+            });
+
+            console.log('🎯 4+ игроков - смена ролей после Бито');
+        }
+    }
+
+    return newRoles;
+};
+
+/**
  * Получает роль текущего игрока
  */
 export const getCurrentPlayerRole = (

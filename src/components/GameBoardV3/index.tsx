@@ -8,7 +8,7 @@ import { createGame, restartGame } from './modules/gameInitialization';
 import { getCurrentPlayerRole } from './modules/roleSystem';
 import { checkCanTakeCards, handleTakeCards } from './modules/cardManagement';
 import { handleBito, hasUnbeatenCards, canPressBito, canPressPas, handlePas, completeTurn } from './modules/turnSystem';
-import { rotateRolesAfterTakeCards } from './modules/roleSystem';
+import { rotateRolesAfterTakeCards, rotateRolesAfterBito } from './modules/roleSystem';
 import { processDrawQueue } from './modules/drawQueue';
 import { GameControls } from './components/GameControls';
 import { PlayersInfo } from './components/PlayersInfo';
@@ -270,11 +270,11 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
             const { newState, endTurn } = result;
             
             if (endTurn) {
-                // Завершаем ход
+                // Завершаем ход - используем rotateRolesAfterBito для смены ролей после успешной защиты
                 console.log('🎯 Бито нажато - завершение хода');
-                const completedState = completeTurn(newState, rotateRolesAfterTakeCards, processDrawQueue);
+                const completedState = completeTurn(newState, rotateRolesAfterBito, processDrawQueue);
                 updateGame(() => completedState);
-                setDefenseCards([]);
+                setDefenseCards(new Array(6).fill(null)); // Явно очищаем локальное состояние защитных карт
                 alert('✅ Бито! Ход завершен, роли обновлены.');
             } else {
                 // Просто передаем приоритет
@@ -297,11 +297,11 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
             const { newState, endTurn } = result;
             
             if (endTurn) {
-                // Завершаем ход
+                // Завершаем ход - используем rotateRolesAfterBito для смены ролей после успешной защиты
                 console.log('🎯 Пас нажат - оба отказались, завершение хода');
-                const completedState = completeTurn(newState, rotateRolesAfterTakeCards, processDrawQueue);
+                const completedState = completeTurn(newState, rotateRolesAfterBito, processDrawQueue);
                 updateGame(() => completedState);
-                setDefenseCards([]);
+                setDefenseCards(new Array(6).fill(null)); // Явно очищаем локальное состояние защитных карт
                 alert('✅ Оба атакующих нажали Пас! Ход завершен, роли обновлены.');
             } else {
                 // Просто отмечаем Пас
