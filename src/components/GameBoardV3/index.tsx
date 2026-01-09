@@ -77,6 +77,8 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                 setDefenseCards(slots);
             }
         }
+        // Всегда сбрасываем флаг после синхронизации
+        isUpdatingDefenseCardsRef.current = false;
     }, [gameState.defenseSlots]);
     
     // Синхронизация размера defenseCards с количеством карт атаки
@@ -255,8 +257,15 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
             processDrawQueue
         );
         
+        // Сначала обновляем глобальное состояние
         updateGame(() => newState);
-        setDefenseCards(new Array(6).fill(null)); // Явно очищаем с правильной длиной
+        
+        // Затем принудительно очищаем локальное состояние
+        // Сбрасываем флаг чтобы разрешить синхронизацию
+        isUpdatingDefenseCardsRef.current = false;
+        setDefenseCards(new Array(6).fill(null));
+        
+        console.log('✅ defenseCards очищен после взятия карт');
         alert('✅ Взято карт со стола! Роли обновлены.');
     };
     
@@ -273,8 +282,16 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                 // Завершаем ход - используем rotateRolesAfterBito для смены ролей после успешной защиты
                 console.log('🎯 Бито нажато - завершение хода');
                 const completedState = completeTurn(newState, rotateRolesAfterBito, processDrawQueue);
+                
+                // Сначала обновляем глобальное состояние
                 updateGame(() => completedState);
-                setDefenseCards(new Array(6).fill(null)); // Явно очищаем локальное состояние защитных карт
+                
+                // Затем принудительно очищаем локальное состояние
+                // Сбрасываем флаг чтобы разрешить синхронизацию
+                isUpdatingDefenseCardsRef.current = false;
+                setDefenseCards(new Array(6).fill(null));
+                
+                console.log('✅ defenseCards очищен после Бито');
                 alert('✅ Бито! Ход завершен, роли обновлены.');
             } else {
                 // Просто передаем приоритет
@@ -300,8 +317,16 @@ const GameBoardV3: React.FC<GameBoardV3Props> = ({ myId, onBack }) => {
                 // Завершаем ход - используем rotateRolesAfterBito для смены ролей после успешной защиты
                 console.log('🎯 Пас нажат - оба отказались, завершение хода');
                 const completedState = completeTurn(newState, rotateRolesAfterBito, processDrawQueue);
+                
+                // Сначала обновляем глобальное состояние
                 updateGame(() => completedState);
-                setDefenseCards(new Array(6).fill(null)); // Явно очищаем локальное состояние защитных карт
+                
+                // Затем принудительно очищаем локальное состояние
+                // Сбрасываем флаг чтобы разрешить синхронизацию
+                isUpdatingDefenseCardsRef.current = false;
+                setDefenseCards(new Array(6).fill(null));
+                
+                console.log('✅ defenseCards очищен после Пас');
                 alert('✅ Оба атакующих нажали Пас! Ход завершен, роли обновлены.');
             } else {
                 // Просто отмечаем Пас

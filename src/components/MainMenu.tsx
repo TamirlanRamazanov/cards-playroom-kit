@@ -235,7 +235,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onPlay3, onDebugGameV2
                         paddingBottom: "3%",  
                     }}
                 >
-                    Debug V2
+                    Debug
                 </button>
 
                 {onGameV2 ? (
